@@ -79,6 +79,23 @@ const TAB_CNT = {
   }
 };
 const COMBO = { CC: [0, 'closed versus closed'], CO: [1, 'closed versus open'], OO: [2, 'open versus open'] };
+const COMBO_IT = { CC: 'chiuso con chiuso', CO: 'chiuso con aperto', OO: 'aperto con aperto' };
+// traduzione di lavoro delle celle di 7.4.3.2 e 7.4.3.3 (fa fede il testo inglese del Codice)
+const TRAD = [
+  ['One on top of the other permitted', 'Ammesso uno sopra l\'altro'],
+  ['Open on top of closed permitted. Otherwise as for “open versus open”', 'Ammesso l\'aperto sopra il chiuso; altrimenti come per “aperto con aperto”'],
+  ['Open on top of closed permitted otherwise as for “open versus open”', 'Ammesso l\'aperto sopra il chiuso; altrimenti come per “aperto con aperto”'],
+  ['Not in the same vertical line unless segregated by a deck', 'Non sulla stessa verticale, salvo separazione con un ponte'],
+  ['Not in the same vertical line', 'Non sulla stessa verticale'],
+  ['As for “open versus open”', 'Come per “aperto con aperto”'],
+  ['One bulkhead and minimum horizontal distance of 24 m', 'Una paratia e distanza orizzontale minima di 24 m'],
+  ['Minimum horizontal distance of 24 m', 'Distanza orizzontale minima di 24 m'],
+  [' and not in or above same hold', ' e non nella stessa stiva né sopra di essa'],
+  [' or one bulkhead', ' o una paratia'],
+  ['One container space', 'Uno spazio container'], ['Two container spaces', 'Due spazi container'], ['Three container spaces', 'Tre spazi container'],
+  ['One bulkhead', 'Una paratia'], ['Two bulkheads', 'Due paratie'], ['No restriction', 'Nessuna restrizione'], ['Prohibited', 'Vietato']
+];
+const trad = s => TRAD.reduce((t, [en, it]) => t.split(en).join(it), s);
 const combo = (a, b) => a.aperto && b.aperto ? 'OO' : a.aperto || b.aperto ? 'CO' : 'CC';
 function bordo(lev, cmb, tipo = 'chiuse') { // prescrizioni a bordo per un livello e una combinazione
   const T = TAB_CNT[tipo][lev], k = COMBO[cmb][0];
@@ -234,4 +251,4 @@ function alimenti(d) { // 7.3.4.2
   const tre = !d.sg.includes('SG50') && ((['6.1', '8'].includes(d.div) && gr === 'III') || (d.div === '8' && gr === 'II') || (gr === 'III' && d.sub.some(c => ['6.1', '8'].includes(c))) || d.sg.includes('SG29'));
   return tre ? 'con alimenti solo ad almeno 3 m (7.3.4.2.2)' : 'non nella stessa unità di trasporto con alimenti (7.3.4.2.1)';
 }
-if (typeof module !== 'undefined') module.exports = { cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE, TAB_CNT, bordo, combo, stivaggio, inf23 };
+if (typeof module !== 'undefined') module.exports = { trad, COMBO_IT, cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE, TAB_CNT, bordo, combo, stivaggio, inf23 };

@@ -1,6 +1,6 @@
 /* Verifica di segregazione del carico – interfaccia, impostazioni, report stampabile, uso offline */
 'use strict';
-const VERSIONE = '1.2-beta';
+const VERSIONE = '1.3-beta';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -75,12 +75,12 @@ function bordoHTML(D, P, cls) { // 7.4.3.2 / 7.4.3.3 per le coppie con segregazi
   }
   const T = TAB_CNT[nave.tipo];
   if (!righe.length) return `<h3>A bordo: ${esc(NAVE_TIPO[nave.tipo])}</h3><p class="${cls}">Nessuna coppia del carico richiede segregazione: nessuna prescrizione della tabella ${T.par}.</p>`;
-  let h = `<h3>A bordo: ${esc(NAVE_TIPO[nave.tipo])}</h3><div class="scroll"><table class="segr bordo"><tr><th>Coppia</th><th>Vertical</th><th>Fore and aft<br>on deck</th><th>Fore and aft<br>under deck</th><th>Athwartships<br>on deck</th><th>Athwartships<br>under deck</th></tr>`;
+  let h = `<h3>A bordo: ${esc(NAVE_TIPO[nave.tipo])}</h3><div class="scroll"><table class="segr bordo"><tr><th>Coppia</th><th>Verticale</th><th>Longitudinale<br>in coperta</th><th>Longitudinale<br>sotto coperta</th><th>Trasversale<br>in coperta</th><th>Trasversale<br>sotto coperta</th></tr>`;
   for (const [a, b, l, cond] of righe) {
     const cm = combo(D[a], D[b]), bo = bordo(l, cm, nave.tipo);
-    h += `<tr><td>${a + 1}–${b + 1}${cond ? ' *' : ''}<br><span class="small">livello ${l}, ${COMBO[cm][1]}</span></td>${[bo.v, bo.faOn, bo.faUnder, bo.atOn, bo.atUnder].map(x => `<td>${esc(x)}</td>`).join('')}</tr>`;
+    h += `<tr><td>${a + 1}–${b + 1}${cond ? ' *' : ''}<br><span class="small">${esc(TERMINE_IT[l])}; ${COMBO_IT[cm]}</span></td>${[bo.v, bo.faOn, bo.faUnder, bo.atOn, bo.atUnder].map(x => `<td title="${esc(x)}">${esc(trad(x))}</td>`).join('')}</tr>`;
   }
-  h += `</table></div><p class="${cls}">Tabella ${T.par} (“${T.nome}”), testo originale. Container space: not less than 6 m fore and aft or not less than 2.4 m athwartships (7.4.3.1.1). * Containers not less than 6 m from intervening bulkhead. All bulkheads and decks shall be resistant to fire and liquids. Righe con * a sinistra: valgono se ricorrono le condizioni indicate nel dettaglio della coppia. Container aperto: unità che non è chiusa, cioè che non racchiude interamente il contenuto con strutture permanenti a pareti complete e rigide; le unità con pareti o tetto in telone non sono chiuse (definizioni del capitolo 1.2; per la classe 1, 7.1.2).</p>`;
+  h += `</table></div><p class="${cls}">Tabella ${T.par} (“${T.nome}”), traduzione di lavoro: fa fede il testo inglese del Codice, riportato nel dettaglio di ogni coppia. Spazio container: almeno 6 m in senso longitudinale o almeno 2,4 m in senso trasversale (7.4.3.1.1). * Container ad almeno 6 m dalla paratia intermedia. Tutte le paratie e i ponti devono essere resistenti al fuoco e ai liquidi. Righe con * a sinistra: valgono se ricorrono le condizioni indicate nel dettaglio della coppia. Container aperto: unità che non è chiusa, cioè che non racchiude interamente il contenuto con strutture permanenti a pareti complete e rigide; le unità con pareti o tetto in telone non sono chiuse (definizioni del capitolo 1.2; per la classe 1, 7.1.2).</p>`;
   const vert = righe.some(r => r[2] >= 2) || righe.some(r => r[2] === 1 && combo(D[r[0]], D[r[1]]) !== 'CC');
   if (nave.tipo === 'chiuse' && nave.copert === 'gutter') h += `<p class="${cls}">Coperchi parzialmente stagni con gutterbar efficaci: considerati “resistant to fire and liquid” (7.4.2.2.1.1)${vert ? '; dove è richiesto “not in the same vertical line unless separated by a deck”, i container con merci pericolose non nei tier direttamente sopra un clear gap, salvo stiva conforme a SOLAS II-2/19 (II-2/54), e container con merci incompatibili non entro le relevant sensitive vertical lines sotto coperta (7.4.2.2.1.2; definizioni in MSC/Circ.1087)' : ''}.</p>`;
   if (nave.tipo === 'chiuse' && nave.copert === 'nogutter') h += `<p class="${cls}">Coperchi parzialmente stagni senza gutterbar efficaci: container con merci pericolose non sui coperchi, salvo stiva conforme a SOLAS II-2/19 (II-2/54) (7.4.2.2.2.1); container con merci incompatibili non entro le relevant sensitive vertical lines dei clear gap, sia con merci in coperta sia con merci sotto coperta (7.4.2.2.2.2–7.4.2.2.2.4; definizioni in MSC/Circ.1087).</p>`;

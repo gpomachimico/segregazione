@@ -33,3 +33,8 @@ console.log('UN 1203 hatchless, nave vecchia:', T('1203', 0, {}, { tipo: 'senza'
 console.log('UN 0081 container aperto:', T('0081', 0, { aperto: true }));
 console.log('UN 1942:', T('1942'));
 console.log(n, 'combinazioni di stivaggio; errori', bad);
+// v1.3: traduzione italiana di tutte le celle, senza parole inglesi residue
+for (const t of ['chiuse', 'senza']) for (const l of [1, 2, 3, 4]) for (const c of ['CC', 'CO', 'OO']) {
+  const b = R.bordo(l, c, t); for (const k of ['v', 'faOn', 'faUnder', 'atOn', 'atUnder']) ok(!/\b(container space|bulkhead|deck|hold|vertical|open|closed|Prohibited|restriction|Minimum)\b/i.test(R.trad(b[k])), `traduzione ${t} ${l} ${c} ${k}: ${R.trad(b[k])}`);
+}
+console.log('traduzione: errori', bad);
