@@ -1,6 +1,6 @@
 # Verifica di segregazione del carico – IMDG 7.2
 
-Web app installabile (PWA), utilizzabile offline, per la verifica della segregazione delle merci pericolose in un carico secondo il Codice IMDG, Emendamento 42-24 (capitoli 3.4, 3.5, 7.2, 7.3.4, 7.4.3.2). I risultati sono pareri tecnici di supporto, non atti amministrativi.
+Web app installabile (PWA), utilizzabile offline, per la verifica della segregazione delle merci pericolose in un carico secondo il Codice IMDG, Emendamento 42-24 (capitoli 3.4, 3.5, 7.1.3, 7.2, 7.3.4 e 7.4 – portacontainer con stive chiuse e senza boccaporti). I risultati sono pareri tecnici di supporto, non atti amministrativi.
 
 Indirizzo: https://gpomachimico.github.io/segregazione/
 
@@ -10,7 +10,7 @@ Indirizzo: https://gpomachimico.github.io/segregazione/
 - `js/regole.js` – regole di segregazione (senza interfaccia, usabile anche con Node)
 - `js/app.js` – inserimento delle merci, matrice, dettaglio per coppia, report stampabile, impostazioni
 - `sw.js`, `manifest.webmanifest`, `icons/` – installazione e uso offline
-- `test/` – `esempi.js` (esempi del Codice), `coppie.js` (200 000 coppie casuali), `browser.py` (prova nel browser)
+- `test/` – `esempi.js` (esempi del Codice), `coppie.js` (200 000 coppie casuali), `bordo.js` (tabelle 7.4.3.2 e 7.4.3.3, stivaggio di tutte le voci), `browser.py` (prova nel browser)
 
 ## Collegamento da altre app
 `https://gpomachimico.github.io/segregazione/?u=1017,1005` apre l'app con le merci indicate già nel carico.

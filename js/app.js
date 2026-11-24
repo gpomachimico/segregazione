@@ -1,6 +1,6 @@
 /* Verifica di segregazione del carico – interfaccia, impostazioni, report stampabile, uso offline */
 'use strict';
-const VERSIONE = '1.0-beta';
+const VERSIONE = '1.1-beta';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -39,7 +39,12 @@ const cartaHTML = () => `<div class="carta"><img src="img/logo-scp.jpg" alt="Ser
 // ---------- carico ----------
 let carico = [];
 try { carico = JSON.parse(localStorage.getItem('carico') || '[]'); } catch (e) { carico = []; }
-const salvaCarico = () => { try { localStorage.setItem('carico', JSON.stringify(carico)); } catch (e) { } };
+const salvaCarico = () => { try { localStorage.setItem('carico', JSON.stringify(carico)); localStorage.setItem('nave', JSON.stringify(nave)); } catch (e) { } };
+// nave (v1.1): tipo di portacontainer, coperchi delle boccaporte, nave costruita prima delle date di 7.4.2.3.1 e 7.4.2.4.1
+let nave = { tipo: 'chiuse', copert: 'stagni', vecchia: false };
+try { nave = Object.assign(nave, JSON.parse(localStorage.getItem('nave') || '{}')); } catch (e) { }
+const NAVE_TIPO = { chiuse: 'portacontainer con stive chiuse (7.4.3.2)', senza: 'portacontainer senza boccaporti (hatchless, 7.4.3.3)' };
+const COPERT = { stagni: 'coperchi delle boccaporte stagni', gutter: 'coperchi parzialmente stagni con gutterbar efficaci (7.4.2.2.1)', nogutter: 'coperchi parzialmente stagni senza gutterbar efficaci (7.4.2.2.2)' };
 // 7.2.3.4: due o più rischi sussidiari e nessun codice che fissi la riga della tabella 7.2.4
 const piuSussidiari = d => d.sub.length > 1 && !d.sg.some(k => SG_COME[k] || k === 'SG69') && !(d.sg.includes('SG68') && d.o.pf60);
 
@@ -47,7 +52,7 @@ function cgVoceHTML(it, n) {
   const R = DATA.dgl[it.u], d = cgDati(it), o = it.opz || {};
   let h = `<div class="cgv"><div><b>${n}. UN ${esc(it.u)}</b> – ${esc(d.nome.length > 90 ? d.nome.slice(0, 90) + '…' : d.nome)} <span class="small">(classe ${esc(d.cl)}${d.sub.length ? ', sussidiari ' + esc(d.sub.join('/')) : ''}${d.pg && d.pg !== '–' ? ', GI ' + esc(d.pg) : ''}${d.r['16b'] && d.r['16b'] !== '–' ? ', 16b ' + esc(d.r['16b']) : ''})</span></div><div class="row">`;
   if (R.length > 1) h += `<select data-k="i" data-n="${n - 1}">${R.map((r, j) => `<option value="${j}"${j === (it.i || 0) ? ' selected' : ''}>voce ${j + 1}: ${esc(r['2'].slice(0, 60))}${r['5'] && r['5'] !== '–' ? ' – GI ' + esc(r['5']) : ''}</option>`).join('')}</select>`;
-  h += `<label class="ck"><input type="checkbox" data-k="lq" data-n="${n - 1}"${it.lq ? ' checked' : ''}> quantità limitate</label><label class="ck"><input type="checkbox" data-k="eq" data-n="${n - 1}"${it.eq ? ' checked' : ''}> quantità esenti</label>`;
+  h += `<label class="ck"><input type="checkbox" data-k="lq" data-n="${n - 1}"${it.lq ? ' checked' : ''}> quantità limitate</label><label class="ck"><input type="checkbox" data-k="eq" data-n="${n - 1}"${it.eq ? ' checked' : ''}> quantità esenti</label><label class="ck"><input type="checkbox" data-k="aperto" data-n="${n - 1}"${o.aperto ? ' checked' : ''}> container aperto</label>`;
   if (d.r['3'] === '2') h += `<select data-k="div2" data-n="${n - 1}">${['2.1', '2.2', '2.3'].map(x => `<option${x === (o.div2 || '2.2') ? ' selected' : ''}>${x}</option>`).join('')}</select>`;
   if (d.sg.includes('SG69')) h += `<label class="ck"><input type="checkbox" data-k="aer1L" data-n="${n - 1}"${o.aer1L !== false ? ' checked' : ''}> capacità fino a 1 L</label>`;
   if (d.sg.includes('SG68')) h += `<label class="ck"><input type="checkbox" data-k="pf60" data-n="${n - 1}"${o.pf60 ? ' checked' : ''}> punto di infiammabilità ≤ 60 °C</label>`;
@@ -62,6 +67,34 @@ function cgVoceHTML(it, n) {
   return h + '</div>';
 }
 const cella = p => `<td class="n cgl${p.lev}">${p.lev ? p.lev : '–'}${p.levDer < p.lev ? '<sup>d</sup>' : ''}${p.levCond > p.lev ? '*' : ''}${p.motivi.some(m => m.opz && m.lev === p.lev && p.lev) ? '<sup>u</sup>' : ''}</td>`;
+function bordoHTML(D, P, cls) { // 7.4.3.2 / 7.4.3.3 per le coppie con segregazione, secondo container chiusi o aperti
+  const righe = [];
+  for (const [k, p] of Object.entries(P)) {
+    const [a, b] = k.split('-').map(Number), lv = [p.lev, p.levCond > p.lev ? p.levCond : 0].filter(Boolean);
+    lv.forEach((l, j) => righe.push([a, b, l, j > 0]));
+  }
+  if (!righe.length) return '';
+  const T = TAB_CNT[nave.tipo];
+  let h = `<h3>A bordo: ${esc(NAVE_TIPO[nave.tipo])}</h3><div class="scroll"><table class="segr bordo"><tr><th>Coppia</th><th>Vertical</th><th>Fore and aft<br>on deck</th><th>Fore and aft<br>under deck</th><th>Athwartships<br>on deck</th><th>Athwartships<br>under deck</th></tr>`;
+  for (const [a, b, l, cond] of righe) {
+    const cm = combo(D[a], D[b]), bo = bordo(l, cm, nave.tipo);
+    h += `<tr><td>${a + 1}–${b + 1}${cond ? ' *' : ''}<br><span class="small">livello ${l}, ${COMBO[cm][1]}</span></td>${[bo.v, bo.faOn, bo.faUnder, bo.atOn, bo.atUnder].map(x => `<td>${esc(x)}</td>`).join('')}</tr>`;
+  }
+  h += `</table></div><p class="${cls}">Tabella ${T.par} (“${T.nome}”), testo originale. Container space: not less than 6 m fore and aft or not less than 2.4 m athwartships (7.4.3.1.1). * Containers not less than 6 m from intervening bulkhead. All bulkheads and decks shall be resistant to fire and liquids. Righe con * a sinistra: valgono se ricorrono le condizioni indicate nel dettaglio della coppia. Container aperto: unità che non è chiusa, cioè che non racchiude interamente il contenuto con strutture permanenti a pareti complete e rigide; le unità con pareti o tetto in telone non sono chiuse (definizioni del capitolo 1.2; per la classe 1, 7.1.2).</p>`;
+  const vert = righe.some(r => r[2] >= 2) || righe.some(r => r[2] === 1 && combo(D[r[0]], D[r[1]]) !== 'CC');
+  if (nave.tipo === 'chiuse' && nave.copert === 'gutter') h += `<p class="${cls}">Coperchi parzialmente stagni con gutterbar efficaci: considerati “resistant to fire and liquid” (7.4.2.2.1.1)${vert ? '; dove è richiesto “not in the same vertical line unless separated by a deck”, i container con merci pericolose non nei tier direttamente sopra un clear gap, salvo stiva conforme a SOLAS II-2/19 (II-2/54), e container con merci incompatibili non entro le relevant sensitive vertical lines sotto coperta (7.4.2.2.1.2; definizioni in MSC/Circ.1087)' : ''}.</p>`;
+  if (nave.tipo === 'chiuse' && nave.copert === 'nogutter') h += `<p class="${cls}">Coperchi parzialmente stagni senza gutterbar efficaci: container con merci pericolose non sui coperchi, salvo stiva conforme a SOLAS II-2/19 (II-2/54) (7.4.2.2.2.1); container con merci incompatibili non entro le relevant sensitive vertical lines dei clear gap, sia con merci in coperta sia con merci sotto coperta (7.4.2.2.2.2–7.4.2.2.2.4; definizioni in MSC/Circ.1087).</p>`;
+  return h;
+}
+function stivaggioHTML(D, perStampa) { // prescrizioni di stivaggio per merce (7.1.3, 3.4.3, 3.5.7, colonna 16a, 7.4.1, 7.4.2)
+  let h = '<h3>Stivaggio delle merci su portacontainer</h3>';
+  D.forEach((d, j) => {
+    const S = stivaggio(d, nave);
+    const li = S.map(x => `<li>${x.cond ? '* ' : ''}${esc(x.txt)} <span class="small">(${esc(x.par)})</span>${x.cond ? ` – <i>${esc(x.cond)}</i>` : ''}</li>`).join('');
+    h += perStampa ? `<p class="coppia">${j + 1}. UN ${esc(d.u)}${d.aperto ? ', container aperto' : ''}</p><ul>${li}</ul>` : `<details><summary>${j + 1}. UN ${esc(d.u)}${d.aperto ? ' (container aperto)' : ''}</summary><ul class="ip">${li}</ul></details>`;
+  });
+  return h;
+}
 function caricoRisHTML(perStampa = false) {
   const D = carico.map(cgDati), n = D.length, cls = perStampa ? 'nota' : 'small';
   if (n < 2) return `<p class="${cls}">Aggiungere almeno due merci.</p>`;
@@ -70,8 +103,7 @@ function caricoRisHTML(perStampa = false) {
   let h = `<h3>Matrice di segregazione</h3><div class="scroll"><table class="segr cgm"><tr><th></th>${D.map((d, j) => `<th>${j + 1}</th>`).join('')}</tr>`;
   D.forEach((d, a) => { h += `<tr><td>${a + 1}. UN ${esc(d.u)}</td>${D.map((e, b) => a === b ? '<td class="n">·</td>' : cella(P[Math.min(a, b) + '-' + Math.max(a, b)])).join('')}</tr>`; });
   h += `</table></div><p class="${cls}">${[0, 1, 2, 3, 4].map(l => `${l || '–'} = ${l ? TERMINE[l] + ' (' + TERMINE_IT[l] + ')' : TERMINE_IT[0]}`).join(' · ')}. <sup>d</sup> = deroga possibile (7.2.6.1 o 7.2.6.5) se ne ricorrono le condizioni; * = prescrizione più severa se ricorrono condizioni da verificare sulla merce; <sup>u</sup> = livello dovuto alla scelta dell'utente di considerare i rischi sussidiari oltre 7.2.3.4.</p>`;
-  const usati = [1, 2, 3, 4].filter(l => Object.values(P).some(p => p.lev === l || p.levCond === l));
-  if (usati.length) h += `<h3>A bordo: portacontainer con stive chiuse, container chiusi (7.4.3.2)</h3><div class="scroll"><table class="segr"><tr><th>Termine</th><th>Verticale</th><th>Longitudinale in coperta</th><th>Longitudinale sotto coperta</th><th>Trasversale in coperta</th><th>Trasversale sotto coperta</th></tr>${usati.map(l => `<tr><td>${l} ${esc(TERMINE[l])}</td>${NAVE[l].map(x => `<td>${esc(x)}</td>`).join('')}</tr>`).join('')}</table></div><p class="${cls}">Spazio container: almeno 6 m in senso longitudinale o 2,4 m in senso trasversale (7.4.3.1.1). Paratie e ponti resistenti al fuoco e ai liquidi.</p>`;
+  h += bordoHTML(D, P, cls);
   h += '<h3>Dettaglio per coppia</h3>';
   for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) {
     const p = P[a + '-' + b], cond = p.motivi.filter(m => m.cond && m.lev > p.lev), der = p.motivi.filter(m => m.der && !m.cond && m.lev > p.levDer);
@@ -82,11 +114,13 @@ function caricoRisHTML(perStampa = false) {
     c += cond.map(m => `<li>* ${esc(m.txt)} – <i>${esc(m.cond)}</i></li>`).join('');
     c += p.note.map(t => `<li class="${cls}">${esc(t)}</li>`).join('');
     c += `<li><b>Unità di trasporto</b>: ${esc(ctu)}</li>`;
+    if (p.lev) { const cm = combo(D[a], D[b]), bo = bordo(p.lev, cm, nave.tipo); c += `<li><b>A bordo</b> (${bo.par}, ${COMBO[cm][1]}): vertical – ${esc(bo.v)}; fore and aft – on deck: ${esc(bo.faOn)}, under deck: ${esc(bo.faUnder)}; athwartships – on deck: ${esc(bo.atOn)}, under deck: ${esc(bo.atUnder)}</li>`; }
     c += '</ul>';
     h += perStampa ? `<p class="coppia">${titolo}</p>${c}` : `<details${p.lev || cond.length ? ' open' : ''}><summary>${titolo}</summary>${c}</details>`;
   }
+  h += stivaggioHTML(D, perStampa);
   const scelte = D.filter(d => piuSussidiari(d) && d.o.subTab).map(d => 'UN ' + d.u);
-  h += `<p class="${cls}">Ipotesi della verifica: tabella 7.2.4 con la classe principale e, se la DGL indica un solo rischio sussidiario, anche con quello (7.2.3.3); con due o più rischi sussidiari valgono le prescrizioni della colonna 16b (7.2.3.4)${scelte.length ? `; per ${scelte.join(', ')} l'utente ha scelto di applicare la tabella 7.2.4 anche ai rischi sussidiari, oltre quanto previsto da 7.2.3.4` : ''}; i codici “come per la classe” sostituiscono la riga della classe principale (7.2.6.2); nei codici “classe …” della colonna 16b la classe comprende i rischi sussidiari (7.2.2.2); prevale la prescrizione più severa e la colonna 16b prevale sulla tabella (7.2.3.1). Le prescrizioni per le navi ro-ro (7.5), da carico generale (7.6) e le chiatte (7.7) non sono riportate. Verifica di supporto tecnico: la responsabilità della segregazione resta di chi prepara il carico.</p>`;
+  h += `<p class="${cls}">Ipotesi della verifica: tabella 7.2.4 con la classe principale e, se la DGL indica un solo rischio sussidiario, anche con quello (7.2.3.3); con due o più rischi sussidiari valgono le prescrizioni della colonna 16b (7.2.3.4)${scelte.length ? `; per ${scelte.join(', ')} l'utente ha scelto di applicare la tabella 7.2.4 anche ai rischi sussidiari, oltre quanto previsto da 7.2.3.4` : ''}; i codici “come per la classe” sostituiscono la riga della classe principale (7.2.6.2); nei codici “classe …” della colonna 16b la classe comprende i rischi sussidiari (7.2.2.2); prevale la prescrizione più severa e la colonna 16b prevale sulla tabella (7.2.3.1). A bordo: tabella 7.4.3.2 o 7.4.3.3 secondo il tipo di nave, con container chiusi o aperti come indicato per ogni merce. Le prescrizioni per le navi ro-ro (7.5), da carico generale (7.6) e le chiatte (7.7) non sono riportate. Verifica di supporto tecnico: la responsabilità della segregazione resta di chi prepara il carico.</p>`;
   return h;
 }
 function mostraCarico() {
@@ -135,7 +169,7 @@ $('cgLista').addEventListener('change', e => {
   const t = e.target, n = +t.dataset.n, k = t.dataset.k; if (!k || !carico[n]) return;
   const it = carico[n]; it.opz = it.opz || {};
   if (k === 'i') it.i = +t.value; else if (k === 'lq' || k === 'eq') it[k] = t.checked;
-  else if (['aer1L', 'pf60', 'subTab'].includes(k)) it.opz[k] = t.checked; else it.opz[k] = t.value;
+  else if (['aer1L', 'pf60', 'subTab', 'aperto'].includes(k)) it.opz[k] = t.checked; else it.opz[k] = t.value;
   mostraCarico();
 });
 $('cgLista').addEventListener('click', e => { const t = e.target; if (t.dataset.k === 'via') { carico.splice(+t.dataset.n, 1); mostraCarico(); } });
@@ -145,8 +179,9 @@ $('cgPrint').onclick = () => {
   if (carico.length < 2) { $('cgMsg').textContent = 'Aggiungere almeno due merci.'; return; }
   const s = leggiImpostazioni(), quando = new Date().toLocaleString('it-IT', { dateStyle: 'long', timeStyle: 'short' }), rif = $('cgRif').value.trim();
   let h = s.carta ? cartaHTML() : '';
-  h += `<div class="intest"><h1>Verifica di segregazione del carico</h1><table class="dati"><tr><td>Data di redazione</td><td>${esc(quando)}</td></tr>${rif ? `<tr><td>Carico</td><td>${esc(rif)}</td></tr>` : ''}<tr><td>Riferimenti</td><td>IMDG Code, Emendamento 42-24 (Ris. MSC.556(108)), capitoli 3.4, 3.5, 7.2, 7.3 e 7.4</td></tr></table></div>`;
+  h += `<div class="intest"><h1>Verifica di segregazione del carico</h1><table class="dati"><tr><td>Data di redazione</td><td>${esc(quando)}</td></tr>${rif ? `<tr><td>Carico</td><td>${esc(rif)}</td></tr>` : ''}<tr><td>Riferimenti</td><td>IMDG Code, Emendamento 42-24 (Ris. MSC.556(108)), capitoli 3.4, 3.5, 7.1, 7.2, 7.3 e 7.4</td></tr></table></div>`;
   h += '<h3>Merci del carico</h3><table class="dati merci">' + carico.map((it, j) => { const d = cgDati(it); return `<tr><td>${j + 1}. UN ${esc(d.u)}</td><td>${esc(d.nome)} – classe ${esc(d.cl)}${d.sub.length ? ', rischi sussidiari ' + esc(d.sub.join('/')) : ''}${d.pg && d.pg !== '–' ? ', GI ' + esc(d.pg) : ''}; 16b: ${esc(d.r['16b'] || '–')}${d.sgg.length && d.o.sgg ? '; gruppo dichiarato ' + esc(d.o.sgg) : ''}${it.lq ? '; quantità limitate' : ''}${it.eq ? '; quantità esenti' : ''}${piuSussidiari(d) && d.o.subTab ? '; tabella 7.2.4 applicata anche ai rischi sussidiari per scelta dell\'utente' : ''}${alimenti(d) ? '; alimenti: ' + esc(alimenti(d)) : ''}</td></tr>`; }).join('') + '</table>';
+  h += `<table class="dati"><tr><td>Nave</td><td>${esc(NAVE_TIPO[nave.tipo])}${nave.tipo === 'chiuse' ? '; ' + esc(COPERT[nave.copert]) : ''}${nave.vecchia ? '; costruita prima delle date di 7.4.2.3.1 e 7.4.2.4.1' : ''}</td></tr></table>`;
   h += caricoRisHTML(true);
   h += `<p class="nota">Parere tecnico di supporto redatto con l'app Verifica di segregazione v${VERSIONE}: non è un atto amministrativo e non sostituisce la consultazione del testo ufficiale del Codice IMDG.</p>`;
   h += `<div class="firma"><div class="firmatario">${esc(s.nome)}</div><div>${esc(s.qualifica)}</div><div class="linea">Firma ____________________________</div></div>`;
@@ -154,6 +189,12 @@ $('cgPrint').onclick = () => {
 };
 
 // ---------- avvio ----------
+(function initNave() {
+  $('nvTipo').value = nave.tipo; $('nvCop').value = nave.copert; $('nvVecchia').checked = nave.vecchia;
+  const agg = () => { nave = { tipo: $('nvTipo').value, copert: $('nvCop').value, vecchia: $('nvVecchia').checked }; $('nvCopBox').classList.toggle('hide', nave.tipo !== 'chiuse'); mostraCarico(); };
+  ['nvTipo', 'nvCop', 'nvVecchia'].forEach(id => $(id).addEventListener('change', agg));
+  $('nvCopBox').classList.toggle('hide', nave.tipo !== 'chiuse');
+})();
 (function avvio() {
   // collegamento da altre app: ?u=1203,1090 aggiunge le merci al carico
   const q = new URLSearchParams(location.search).get('u');

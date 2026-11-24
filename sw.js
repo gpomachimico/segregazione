@@ -1,5 +1,5 @@
 /* Service worker: app utilizzabile offline. I file dell'app vanno in cache all'installazione e si aggiornano a ogni nuova versione. */
-const VERSIONE = 'segregazione-1.0-beta-1';
+const VERSIONE = 'segregazione-1.1-beta-1';
 const APP = ['./', 'index.html', 'manifest.webmanifest', 'css/app.css', 'js/imdg.js', 'js/regole.js', 'js/app.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png', 'img/logo-scp.jpg'];
 self.addEventListener('install', e => {

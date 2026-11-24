@@ -48,13 +48,86 @@ const NITRATI = ['1942', '2067', '1451', '2722', '1486', '1477', '1498', '1446',
 const ESPL_MINA = ['0081', '0082', '0084', '0241', '0331', '0332']; // esplosivi da mina (EXPLOSIVE, BLASTING), escluso 0083
 const TERMINE = { 0: 'nessuna segregazione', 1: '“away from”', 2: '“separated from”', 3: '“separated by a complete compartment or hold from”', 4: '“separated longitudinally by an intervening complete compartment or hold from”' };
 const TERMINE_IT = { 0: 'nessuna segregazione richiesta', 1: 'a distanza da', 2: 'separato da', 3: 'separato da un compartimento o una stiva completa', 4: 'separato longitudinalmente da un compartimento o una stiva completa intermedia' };
-// 7.4.3.2, colonna "closed versus closed": [verticale, longitudinale in coperta, longitudinale sotto coperta, trasversale in coperta, trasversale sotto coperta]
-const NAVE = {
-  1: ['uno sopra l\'altro ammesso', 'nessuna restrizione', 'nessuna restrizione', 'nessuna restrizione', 'nessuna restrizione'],
-  2: ['non sulla stessa verticale, salvo separazione con un ponte', 'uno spazio container', 'uno spazio container o una paratia', 'uno spazio container', 'uno spazio container'],
-  3: ['non sulla stessa verticale, salvo separazione con un ponte', 'uno spazio container', 'una paratia', 'due spazi container', 'una paratia'],
-  4: ['vietato', 'distanza orizzontale minima 24 m', 'una paratia e distanza orizzontale minima 24 m (container ad almeno 6 m dalla paratia)', 'vietato', 'vietato']
+// ---------- 7.4: portacontainer (v1.1-beta) ----------
+// 7.4.3.2 (stive chiuse) e 7.4.3.3 (senza boccaporti), testo originale. Per ogni livello: verticale [CC, CO, OO];
+// longitudinale (fore and aft) e trasversale (athwartships) [CC in coperta, CC sotto, CO in coperta, CO sotto, OO in coperta, OO sotto].
+// CC = closed versus closed, CO = closed versus open, OO = open versus open. Celle unite del Codice ripetute in ogni colonna.
+const CS = 'One container space', CS2 = 'Two container spaces', CS3 = 'Three container spaces', BH = 'One bulkhead', BH2 = 'Two bulkheads', NR = 'No restriction', PR = 'Prohibited';
+const NSH = ' and not in or above same hold';
+const TAB_CNT = {
+  chiuse: {
+    par: '7.4.3.2', nome: 'containerships with closed cargo holds',
+    1: { v: ['One on top of the other permitted', 'Open on top of closed permitted. Otherwise as for “open versus open”', 'Not in the same vertical line unless segregated by a deck'],
+      fa: [NR, NR, NR, NR, CS, CS + ' or one bulkhead'], at: [NR, NR, NR, NR, CS, CS] },
+    2: { v: ['Not in the same vertical line unless segregated by a deck', 'As for “open versus open”', 'Not in the same vertical line unless segregated by a deck'],
+      fa: [CS, CS + ' or one bulkhead', CS, CS + ' or one bulkhead', CS, BH], at: [CS, CS, CS, CS2, CS2, BH] },
+    3: { v: ['Not in the same vertical line unless segregated by a deck', 'As for “open versus open”', 'Not in the same vertical line unless segregated by a deck'],
+      fa: [CS, BH, CS, BH, CS2, BH2], at: [CS2, BH, CS2, BH, CS3, BH2] },
+    4: { v: [PR, PR, PR], fa: ['Minimum horizontal distance of 24 m', 'One bulkhead and minimum horizontal distance of 24 m*', 'Minimum horizontal distance of 24 m', BH2, 'Minimum horizontal distance of 24 m', BH2],
+      at: [PR, PR, PR, PR, PR, PR] }
+  },
+  senza: {
+    par: '7.4.3.3', nome: 'hatchless containerships',
+    1: { v: ['One on top of the other permitted', 'Open on top of closed permitted otherwise as for “open versus open”', 'Not in the same vertical line'],
+      fa: [NR, NR, NR, NR, CS, CS + ' or one bulkhead'], at: [NR, NR, NR, NR, CS, CS] },
+    2: { v: ['Not in the same vertical line', 'As for “open versus open”', 'Not in the same vertical line'],
+      fa: [CS, CS + ' or one bulkhead', CS, CS + ' or one bulkhead', CS + NSH, BH], at: [CS, CS, CS2, CS2, CS2 + NSH, BH] },
+    3: { v: ['Not in the same vertical line', 'As for “open versus open”', 'Not in the same vertical line'],
+      fa: [CS + NSH, BH, CS + NSH, BH, CS2 + NSH, BH2], at: [CS2 + NSH, BH, CS2 + NSH, BH, CS3 + NSH, BH2] },
+    4: { v: [PR, PR, PR], fa: ['Minimum horizontal distance of 24 m' + NSH, 'One bulkhead and minimum horizontal distance of 24 m*', 'Minimum horizontal distance of 24 m' + NSH, BH2, 'Minimum horizontal distance of 24 m' + NSH, BH2],
+      at: [PR, PR, PR, PR, PR, PR] }
+  }
 };
+const COMBO = { CC: [0, 'closed versus closed'], CO: [1, 'closed versus open'], OO: [2, 'open versus open'] };
+const combo = (a, b) => a.aperto && b.aperto ? 'OO' : a.aperto || b.aperto ? 'CO' : 'CC';
+function bordo(lev, cmb, tipo = 'chiuse') { // prescrizioni a bordo per un livello e una combinazione
+  const T = TAB_CNT[tipo][lev], k = COMBO[cmb][0];
+  const v = /^As for/.test(T.v[k]) ? `${T.v[k]} (${T.v[2]})` : T.v[k];
+  return { par: TAB_CNT[tipo].par, v, faOn: T.fa[2 * k], faUnder: T.fa[2 * k + 1], atOn: T.at[2 * k], atUnder: T.at[2 * k + 1] };
+}
+// compatibilità con la versione 1.0: tabella sintetica "closed versus closed" su stive chiuse
+const NAVE = {};
+for (const l of [1, 2, 3, 4]) { const b = bordo(l, 'CC'); NAVE[l] = [b.v, b.faOn, b.faUnder, b.atOn, b.atUnder]; }
+
+// 7.1.3 categorie di stivaggio, colonna delle navi da carico (i portacontainer sono navi da carico)
+const CAT_CARGO = {
+  '01': 'On deck in closed cargo transport unit or under deck', '02': 'On deck in closed cargo transport unit or under deck',
+  '03': 'On deck in closed cargo transport unit or under deck', '04': 'On deck in closed cargo transport unit or under deck in closed cargo transport unit',
+  '05': 'On deck only in closed cargo transport unit', A: 'On deck or under deck', B: 'On deck or under deck', C: 'On deck only', D: 'On deck only', E: 'On deck or under deck'
+};
+const SOLO_COPERTA = ['05', 'C', 'D'];
+// infiammabilità ai fini di 7.4.2.3 e 7.4.2.4: sì, no, oppure "cond" (da verificare)
+function inf23(d) {
+  if (d.div === '2.1') return 'si';
+  if (d.div === '3') return ['I', 'II'].includes(d.pg) ? 'si' : d.pg === 'III' ? 'no' : 'cond';
+  return d.sub.includes('3') || d.sub.includes('2.1') ? 'cond' : 'no';
+}
+// prescrizioni di stivaggio su portacontainer per una merce (7.1.3, 3.4.3, 3.5.7, colonna 16a, 7.4.1, 7.4.2)
+function stivaggio(d, nave = {}) {
+  const S = [], add = (txt, par, cond) => S.push({ txt, par, cond });
+  const cat = d.lq || d.eq ? 'A' : ((d.r['16a'] || '').match(/Category\s+(\w+)/) || [])[1];
+  if (d.lq || d.eq) add('stowage category A: ' + CAT_CARGO.A + '; le altre disposizioni della colonna 16a non si applicano', d.lq ? '3.4.3' : '3.5.7.1');
+  else if (cat) add(`stowage category ${cat}: ${CAT_CARGO[cat] || '–'}`, '7.1.3, colonna 16a');
+  const solo = cat && SOLO_COPERTA.includes(cat);
+  if (cat && /^0[1-5]$/.test(cat) && d.aperto) add(`container indicato come aperto: con la categoria ${cat} ${['04', '05'].includes(cat) ? 'serve sempre' : 'in coperta serve'} un'unità di trasporto chiusa per la classe 1 (definizione in 7.1.2)${['04', '05'].includes(cat) ? '' : '; sotto coperta ammesso'}`, '7.1.3.1');
+  if (!(d.lq || d.eq)) for (const c of (d.r['16a'] || '').match(/\b(SW|H)\d+\b/g) || []) add(`${c}: ${(DATA.imdgCod[c.replace(/\d+/, '')] || {})[c] || ''}`, 'colonna 16a');
+  if (nave.tipo === 'senza' && solo) add('stivaggio solo in coperta: non nelle stive senza boccaporti né sulla loro verticale', '7.4.2.1');
+  else if (nave.tipo === 'senza') add('nelle stive senza boccaporti o sulla loro verticale solo se la stiva è conforme a SOLAS II-2/19 (o II-2/54)', '7.4.2.1');
+  const f = inf23(d), cf = f === 'cond' ? 'se gas infiammabile o liquido con punto di infiammabilità inferiore a 23 °C (vaso chiuso)' : null;
+  if (f !== 'no' && !(d.lq || d.eq)) {
+    add('in coperta: almeno 2,4 m in orizzontale, e in proiezione verticale, da qualsiasi potenziale sorgente di accensione', '7.4.2.3.2', cf);
+    add('sotto coperta: non insieme a container a temperatura controllata che non siano di tipo certificato sicuro', '7.4.2.3.3', cf);
+    if (nave.vecchia) add('nave costruita prima delle date di 7.4.2.3.1: solo in coperta, salvo approvazione dell\'Amministrazione', '7.4.2.3.1', cf);
+  }
+  if (nave.vecchia && !solo && !(d.lq || d.eq)) {
+    const sw = /\bSW[56]\b/.test(d.r['16a'] || '');
+    const v = d.div === '2.1' || d.div === '4.3' || (['6.1', '8'].includes(d.div) && d.sub.includes('3')) || sw;
+    if (v || f !== 'no') add('nave costruita prima delle date di 7.4.2.4.1: sotto coperta solo in stiva con ventilazione meccanica, altrimenti solo in coperta', '7.4.2.4.1', v ? null : cf);
+  }
+  if (['1374', '2216', '3497'].includes(d.u)) add('si applicano anche le disposizioni di 7.6.2.7.2.2', '7.4.1.3');
+  if (['1942', '2067', '2071'].includes(d.u)) add('si applicano anche le disposizioni di 7.6.2.8.4 e 7.6.2.11.1', '7.4.1.4');
+  return S;
+}
 
 function cgDati(it) { // classe, divisione, gruppo di compatibilità, rischi sussidiari della voce del carico
   const r = DATA.dgl[it.u][it.i || 0], o = it.opz || {};
@@ -66,7 +139,7 @@ function cgDati(it) { // classe, divisione, gruppo di compatibilità, rischi sus
   const b16 = (r['16b'] || '').split(/\s+/).filter(x => /^SGG?\d+$/.test(x));
   const sgg = [...new Set(b16.filter(x => /^SGG/.test(x)).concat((o.sgg || '').toUpperCase().match(/SGG\d+/g) || []))];
   return { u: it.u, r, cl, div, cg, sub, sg: b16.filter(x => /^SG\d/.test(x)), sgg, nome: r['2'], pg: r['5'], lq: !!it.lq, eq: !!it.eq, o,
-    nos: /N\.O\.S\./.test(r['2']), cl1: /^1/.test(cl) };
+    nos: /N\.O\.S\./.test(r['2']), cl1: /^1/.test(cl), aperto: !!o.aperto };
 }
 const rigaTab = div => { const m = div.match(/^1\.(\d)/); return m ? { 1: '1.1', 2: '1.1', 5: '1.1', 3: '1.3', 6: '1.3', 4: '1.4' }[m[1]] : div; };
 function righeTab(d, altro) { // righe della tabella 7.2.4 da usare per la merce d: [riga, origine]
@@ -161,4 +234,4 @@ function alimenti(d) { // 7.3.4.2
   const tre = !d.sg.includes('SG50') && ((['6.1', '8'].includes(d.div) && gr === 'III') || (d.div === '8' && gr === 'II') || (gr === 'III' && d.sub.some(c => ['6.1', '8'].includes(c))) || d.sg.includes('SG29'));
   return tre ? 'con alimenti solo ad almeno 3 m (7.3.4.2.2)' : 'non nella stessa unità di trasporto con alimenti (7.3.4.2.1)';
 }
-if (typeof module !== 'undefined') module.exports = { cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE };
+if (typeof module !== 'undefined') module.exports = { cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE, TAB_CNT, bordo, combo, stivaggio, inf23 };

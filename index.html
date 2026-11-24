@@ -17,7 +17,7 @@
   <div class="hrow">
     <div>
       <h1>Verifica di segregazione del carico</h1>
-      <p>v1.0-beta · IMDG Code 42-24, capitolo 7.2 · parere tecnico di supporto, non atto amministrativo<span id="netstato"></span></p>
+      <p>v1.1-beta · IMDG Code 42-24, capitoli 7.2 e 7.4 · parere tecnico di supporto, non atto amministrativo<span id="netstato"></span></p>
     </div>
     <button id="btnSet" class="icon" type="button" aria-label="Impostazioni">⚙</button>
   </div>
@@ -45,12 +45,22 @@
 </section>
 
 <section class="card">
-  <h2>2 · Segregazione</h2>
+  <h2>2 · Nave</h2>
+  <label for="nvTipo">Tipo di nave</label>
+  <select id="nvTipo"><option value="chiuse">Portacontainer con stive chiuse (7.4.3.2)</option><option value="senza">Portacontainer senza boccaporti – hatchless (7.4.3.3)</option></select>
+  <div id="nvCopBox"><label for="nvCop">Coperchi delle boccaporte</label>
+  <select id="nvCop"><option value="stagni">Stagni</option><option value="gutter">Parzialmente stagni, con gutterbar efficaci (7.4.2.2.1)</option><option value="nogutter">Parzialmente stagni, senza gutterbar efficaci (7.4.2.2.2)</option></select></div>
+  <label class="chk"><input type="checkbox" id="nvVecchia"> Nave da carico costruita prima del 1/9/1984 (≥ 500 GT) o del 1/2/1992 (&lt; 500 GT) – 7.4.2.3.1, 7.4.2.4.1</label>
+  <p class="small">Per ogni merce indicare nella lista se il container è aperto (open top, flat rack, pareti o tetto in telone); altrimenti è considerato chiuso.</p>
+</section>
+
+<section class="card">
+  <h2>3 · Segregazione e stivaggio</h2>
   <div id="cgRis"></div>
   <button id="cgPrint" type="button">Stampa / salva PDF della verifica</button>
 </section>
 
-<p class="small piede">Dati: Dangerous Goods List e capitolo 7.2 del Codice IMDG, Emendamento 42-24 (Ris. MSC.556(108)), estratti dal testo ufficiale. Non coperti: navi ro-ro (7.5), carico generale (7.6), chiatte (7.7).</p>
+<p class="small piede">Dati: Dangerous Goods List e capitolo 7.2 del Codice IMDG, Emendamento 42-24 (Ris. MSC.556(108)), estratti dal testo ufficiale. Coperti: portacontainer (7.4). Non coperti: navi ro-ro (7.5), carico generale (7.6), chiatte (7.7).</p>
 </main>
 <div id="report"></div>
 <script>const DATA = {};</script>
