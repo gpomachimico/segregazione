@@ -1,6 +1,6 @@
 /* Verifica di segregazione del carico – interfaccia, impostazioni, report stampabile, uso offline */
 'use strict';
-const VERSIONE = '1.4-beta';
+const VERSIONE = '1.5-beta';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -42,7 +42,8 @@ try { carico = JSON.parse(localStorage.getItem('carico') || '[]'); } catch (e) {
 const salvaCarico = () => { try { localStorage.setItem('carico', JSON.stringify(carico)); localStorage.setItem('nave', JSON.stringify(nave)); } catch (e) { } };
 // nave (v1.1): tipo di portacontainer, coperchi delle boccaporte, nave costruita prima delle date di 7.4.2.3.1 e 7.4.2.4.1
 let nave = { tipo: 'chiuse', copert: 'stagni', vecchia: false };
-let tabBordo = false; try { tabBordo = localStorage.getItem('tabBordo') === '1'; } catch (e) { }
+let tabBordo = false, tabCoppie = false;
+try { tabBordo = localStorage.getItem('tabBordo') === '1'; tabCoppie = localStorage.getItem('tabCoppie') === '1'; } catch (e) { }
 try { nave = Object.assign(nave, JSON.parse(localStorage.getItem('nave') || '{}')); } catch (e) { }
 const NAVE_TIPO = { chiuse: 'portacontainer con stive chiuse (7.4.3.2)', senza: 'portacontainer senza boccaporti (hatchless, 7.4.3.3)' };
 const COPERT = { stagni: 'coperchi delle boccaporte stagni', gutter: 'coperchi parzialmente stagni con gutterbar efficaci (7.4.2.2.1)', nogutter: 'coperchi parzialmente stagni senza gutterbar efficaci (7.4.2.2.2)' };
@@ -79,7 +80,7 @@ function bordoHTML(D, P, cls, perStampa) { // 7.4.3.2 / 7.4.3.3 per le coppie co
   // tabella delle coppie: sullo schermo solo a richiesta, nel report solo se attivata (richiesta di Luca, v1.4)
   let h = `<h3>A bordo: ${esc(NAVE_TIPO[nave.tipo])}</h3>`;
   if (!perStampa) h += `<button type="button" class="sec mini" id="btnBordo" aria-pressed="${tabBordo}">${tabBordo ? 'Nascondi la tabella delle coppie' : 'Mostra la tabella delle coppie (sarà riportata anche nel report)'}</button>`;
-  if (!tabBordo) h += `<p class="${cls}">${perStampa ? '' : 'Tabella non attiva. '}Le prescrizioni a bordo di ogni coppia (tabella ${T.par}, testo originale) sono nel dettaglio per coppia.</p>`;
+  if (!tabBordo) h += `<p class="${cls}">${perStampa ? '' : 'Tabella non attiva. '}${tabCoppie ? `Le prescrizioni a bordo di ogni coppia (tabella ${T.par}, testo originale) sono nel dettaglio per coppia.` : `Prescrizioni a bordo della tabella ${T.par} per ${righe.length === 1 ? 'una coppia' : righe.length + ' coppie'}: ${perStampa ? 'non riportate in questo report' : 'attivare la tabella o il dettaglio per coppia'}.`}</p>`;
   else h += `<div class="scroll"><table class="segr bordo"><tr><th>Coppia</th><th>Verticale</th><th>Longitudinale<br>in coperta</th><th>Longitudinale<br>sotto coperta</th><th>Trasversale<br>in coperta</th><th>Trasversale<br>sotto coperta</th></tr>`;
   if (tabBordo) for (const [a, b, l, cond] of righe) {
     const cm = combo(D[a], D[b]), bo = bordo(l, cm, nave.tipo);
@@ -109,8 +110,11 @@ function caricoRisHTML(perStampa = false) {
   D.forEach((d, a) => { h += `<tr><td>${a + 1}. UN ${esc(d.u)}</td>${D.map((e, b) => a === b ? '<td class="n">·</td>' : cella(P[Math.min(a, b) + '-' + Math.max(a, b)])).join('')}</tr>`; });
   h += `</table></div><p class="${cls}">${[0, 1, 2, 3, 4].map(l => `${l || '–'} = ${l ? TERMINE[l] + ' (' + TERMINE_IT[l] + ')' : TERMINE_IT[0]}`).join(' · ')}. <sup>d</sup> = deroga possibile (7.2.6.1 o 7.2.6.5) se ne ricorrono le condizioni; * = prescrizione più severa se ricorrono condizioni da verificare sulla merce; <sup>u</sup> = livello dovuto alla scelta dell'utente di considerare i rischi sussidiari oltre 7.2.3.4.</p>`;
   h += bordoHTML(D, P, cls, perStampa);
-  h += '<h3>Dettaglio per coppia</h3>';
-  for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) {
+  // dettaglio per coppia: sullo schermo solo a richiesta, nel report solo se attivato (richiesta di Luca, v1.5)
+  if (!perStampa || tabCoppie) h += '<h3>Dettaglio per coppia</h3>';
+  if (!perStampa) h += `<button type="button" class="sec mini" id="btnCoppie" aria-pressed="${tabCoppie}">${tabCoppie ? 'Nascondi il dettaglio per coppia' : 'Mostra il dettaglio per coppia (sarà riportato anche nel report)'}</button>`;
+  if (!tabCoppie && !perStampa) h += `<p class="${cls}">Dettaglio non attivo: paragrafi del Codice, unità di trasporto e prescrizioni a bordo (testo originale) di ogni coppia.</p>`;
+  if (tabCoppie) for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) {
     const p = P[a + '-' + b], cond = p.motivi.filter(m => m.cond && m.lev > p.lev), der = p.motivi.filter(m => m.der && !m.cond && m.lev > p.levDer);
     const titolo = `${a + 1}–${b + 1}: UN ${D[a].u} / UN ${D[b].u} → <b>${p.lev ? TERMINE[p.lev] : TERMINE_IT[0]}</b>${p.levDer < p.lev ? ` (deroga possibile: ${p.levDer ? TERMINE[p.levDer] : TERMINE_IT[0]})` : ''}${cond.length ? ' *' : ''}`;
     const ctu = p.lev === 0 ? (p.ctu ? 'ammesse nella stessa unità di trasporto' : 'non nella stessa unità di trasporto') : p.lev === 1 ? 'non nella stessa unità di trasporto, salvo approvazione dell\'autorità competente con un livello di sicurezza equivalente (7.3.4.1); non nello stesso imballaggio esterno (7.2.3.2)' : 'non nella stessa unità di trasporto né nello stesso imballaggio esterno (7.2.3.2, 7.3.4.1)';
@@ -178,9 +182,10 @@ $('cgLista').addEventListener('change', e => {
   mostraCarico();
 });
 $('cgRis').addEventListener('click', e => {
-  if (e.target.id !== 'btnBordo') return;
-  tabBordo = !tabBordo; try { localStorage.setItem('tabBordo', tabBordo ? '1' : '0'); } catch (er) { }
-  mostraCarico(); const b = $('btnBordo'); if (b) b.focus();
+  const id = e.target.id;
+  if (id === 'btnBordo') tabBordo = !tabBordo; else if (id === 'btnCoppie') tabCoppie = !tabCoppie; else return;
+  try { localStorage.setItem('tabBordo', tabBordo ? '1' : '0'); localStorage.setItem('tabCoppie', tabCoppie ? '1' : '0'); } catch (er) { }
+  mostraCarico(); const b = $(id); if (b) b.focus();
 });
 $('cgLista').addEventListener('click', e => { const t = e.target; if (t.dataset.k === 'via') { carico.splice(+t.dataset.n, 1); mostraCarico(); } });
 
