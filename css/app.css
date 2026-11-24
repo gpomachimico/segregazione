@@ -1,0 +1,88 @@
+
+:root{--bg:#f6f5f2;--card:#fff;--ink:#1d1d1b;--mute:#6b6a66;--line:#e2e0da;--acc:#1f4e79;
+--z1:#c0392b;--z2:#e67e22;--z3:#f1c40f;--erg:#2c3e50}
+@media (prefers-color-scheme:dark){:root{--bg:#161616;--card:#222;--ink:#eee;--mute:#a5a39d;--line:#3a3936;--acc:#7fb3e0;--erg:#c8d1d9}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:14px 16px 10px;border-bottom:1px solid var(--line);background:var(--card)}
+header h1{font-size:18px;margin:0}
+header p{margin:2px 0 0;font-size:12.5px;color:var(--mute)}
+main{max-width:720px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h2{font-size:15px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+input,select{width:100%;font-size:17px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink)}
+.row{display:flex;gap:10px}.row>div{flex:1;min-width:0}
+.id{margin-top:10px;padding:10px;border-radius:9px;background:var(--bg);font-size:14px}
+.id b{font-size:15px}.tag{display:inline-block;font-size:12px;padding:2px 7px;border-radius:20px;border:1px solid var(--line);margin:4px 4px 0 0}
+.warn{background:#fff3cd;color:#664d03;border-radius:9px;padding:10px;font-size:14px;margin-top:10px}
+@media (prefers-color-scheme:dark){.warn{background:#3d3412;color:#f5dc8a}}
+button{font-size:17px;font-weight:600;padding:13px;border-radius:10px;border:0;background:var(--acc);color:#fff;width:100%;margin-top:14px}
+button.sec{background:transparent;color:var(--acc);border:1px solid var(--acc);font-weight:500}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.chip{font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radius:20px;background:var(--bg);width:auto;margin:0;color:var(--ink);font-weight:500}
+.chip.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+td,th{padding:7px 4px;border-bottom:1px solid var(--line);text-align:left}
+td.n{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+td.v{text-align:right;font-weight:600}
+ul.ip{margin:0;padding-left:18px;font-size:13.5px;color:var(--mute)}ul.ip li{margin:3px 0}
+.small{font-size:12.5px;color:var(--mute)}
+.hide{display:none}
+
+details.small summary{cursor:pointer;margin-top:6px}
+label.chk{display:flex;gap:10px;align-items:center;font-size:15px;color:var(--ink);margin-top:12px}
+label.chk input{width:22px;height:22px;flex:none}
+header{padding-top:max(14px, env(safe-area-inset-top))}
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+button.icon{width:44px;height:44px;margin:0;padding:0;font-size:22px;border-radius:50%;background:var(--bg);color:var(--ink);border:1px solid var(--line);flex:none}
+button.mini{width:auto;margin:0;padding:6px 12px;font-size:14px}
+#netstato{font-weight:600}
+#cgRes{display:flex;flex-direction:column;gap:4px;margin-top:6px;max-height:320px;overflow-y:auto}
+#cgRes .res{text-align:left;background:var(--card);color:var(--ink);border:1px solid var(--line);padding:8px 10px;font-size:14px;font-weight:400;margin:0;width:100%}
+#cgRes .res b{margin-right:6px}
+.cgv{border-bottom:1px solid var(--line);padding:8px 0}
+.cgv .row{flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px}
+.cgv select,.cgv input[type=text]{width:auto;max-width:100%;font-size:14px;padding:6px 8px}
+.cgv label.ck,.warn label.ck{font-size:13px;display:inline-flex;gap:4px;align-items:center;margin:0;color:var(--ink)}
+.warn label.ck{display:flex;margin-top:6px}
+.cgv input[type=checkbox]{width:18px;height:18px}
+.scroll{overflow-x:auto}
+table.segr{width:100%;border-collapse:collapse;font-size:13px}
+table.segr td,table.segr th{border-bottom:1px solid var(--line);padding:4px;text-align:left}
+table.segr td.n{text-align:center;font-weight:bold;min-width:2.2em}
+td.cgl1{background:#fff4c2}td.cgl2{background:#ffd9a8}td.cgl3{background:#ffb3a0}td.cgl4{background:#f08a8a}
+@media (prefers-color-scheme:dark){td.cgl1,td.cgl2,td.cgl3,td.cgl4{color:#111}}
+#cgRis h3{font-size:15px;margin:14px 0 6px}
+#cgRis details{margin:6px 0}#cgRis summary{cursor:pointer;font-size:14px}
+.piede{text-align:center;margin:4px 8px 24px}
+#report{display:none}
+@media print{
+  html,body{background:#fff!important}
+  header,main{display:none!important}
+  #report{display:block;color:#000;font:10.5pt/1.4 Georgia,serif;padding:0}
+  #report h1{font-size:15pt;margin:0 0 2pt}
+  #report h3{font-size:11.5pt;margin:12pt 0 4pt;border-bottom:1px solid #999}
+  #report table{width:100%;border-collapse:collapse;font-size:9.5pt}
+  #report td,#report th{border-bottom:1px solid #ccc;padding:2pt 4pt;text-align:left}
+  #report table.segr td.n{text-align:center;font-weight:bold}
+  #report td.cgl1,#report td.cgl2,#report td.cgl3,#report td.cgl4{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #report .intest{border-bottom:2px solid #000;padding-bottom:6pt;margin-bottom:8pt}
+  #report table.dati td{border:0;padding:1pt 4pt 1pt 0;font-size:10pt;vertical-align:top}
+  #report table.dati td:first-child{width:2.8cm;color:#333}
+  #report .nota{font-size:9pt;color:#333}
+  #report .coppia{margin:8pt 0 2pt;break-after:avoid}
+  #report ul{margin:0 0 4pt;padding-left:14pt}
+  #report .firma{margin-top:24pt;text-align:right;break-inside:avoid}
+  #report .firma .linea{margin-top:28pt}
+  #report .firmatario{font-size:11.5pt;font-weight:bold}
+  #report .carta{display:flex;align-items:stretch;gap:8pt;font-family:Verdana,Geneva,sans-serif;color:#000;border-bottom:3px double #000;padding-bottom:3pt;margin-bottom:10pt}
+  #report .carta img{width:2.5cm;height:auto;align-self:center}
+  #report .carta-t{flex:1;border-left:2px solid #000;padding-left:8pt;text-align:center;line-height:1.25}
+  #report .carta .c1{font-size:12pt;font-weight:bold}
+  #report .carta .c2{font-size:9pt;font-weight:bold}
+  #report .carta .c3{font-size:8pt;font-weight:bold}
+  #report .carta .c4{display:flex;justify-content:space-between;text-align:left;font-size:8pt;font-weight:bold;margin-top:6pt}
+  #report .carta .c4 .dx{text-align:right}
+  @page{size:A4;margin:15mm}
+}

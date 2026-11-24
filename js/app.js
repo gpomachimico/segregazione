@@ -1,0 +1,167 @@
+/* Verifica di segregazione del carico – interfaccia, impostazioni, report stampabile, uso offline */
+'use strict';
+const VERSIONE = '1.0-beta';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ---------- impostazioni del report (solo su questo dispositivo) ----------
+const FIRMATARIO_DEFAULT = { nome: 'Dott. Gianluca POMA', qualifica: 'Consulente Chimico di Porto' };
+function leggiImpostazioni() {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem('impostazioni') || '{}'); } catch (e) { s = {}; }
+  return { nome: s.nome || FIRMATARIO_DEFAULT.nome, qualifica: s.qualifica || FIRMATARIO_DEFAULT.qualifica, carta: s.carta !== false };
+}
+function salvaImpostazioni(o) { try { localStorage.setItem('impostazioni', JSON.stringify(o)); return true; } catch (e) { return false; } }
+(function initImpostazioni() {
+  const s = leggiImpostazioni();
+  $('sNome').value = s.nome; $('sQual').value = s.qualifica; $('sCarta').checked = s.carta;
+  $('btnSet').onclick = () => $('setbox').classList.toggle('hide');
+  $('sSave').onclick = () => {
+    const ok = salvaImpostazioni({ nome: $('sNome').value.trim(), qualifica: $('sQual').value.trim(), carta: $('sCarta').checked });
+    $('setbox').classList.add('hide');
+    if (!ok) $('cgMsg').textContent = 'Impossibile salvare le impostazioni su questo dispositivo.';
+  };
+})();
+
+// carta intestata dello Studio (dal modello Word fornito da Luca il 19/11/2026; uguale all'app aree di danno)
+const STUDIO = {
+  nome: 'Studio Professionale Associato Consulenti Chimici di Porto',
+  soci: 'Dr. Poma Gianluca e Dr. Mameli Pier Luca',
+  sede: 'Sede legale: Viale Diaz, 40 – 09125 Cagliari',
+  fisc: 'Tel/fax +39 070303350 C.F./P. Iva 03231430921',
+  sx: ['Dott. Gianluca POMA', 'Mobile: +39 333-5780697'],
+  dx: ['Dott. Pier Luca MAMELI', 'Mobile: +39 393-9936321']
+};
+const cartaHTML = () => `<div class="carta"><img src="img/logo-scp.jpg" alt="Servizio Chimico di Porto – Cagliari"><div class="carta-t">
+  <div class="c1">${STUDIO.nome}</div><div class="c2">${STUDIO.soci}</div><div class="c3">${STUDIO.sede}<br>${STUDIO.fisc}</div>
+  <div class="c4"><span>${STUDIO.sx.join('<br>')}</span><span class="dx">${STUDIO.dx.join('<br>')}</span></div></div></div>`;
+
+// ---------- carico ----------
+let carico = [];
+try { carico = JSON.parse(localStorage.getItem('carico') || '[]'); } catch (e) { carico = []; }
+const salvaCarico = () => { try { localStorage.setItem('carico', JSON.stringify(carico)); } catch (e) { } };
+// 7.2.3.4: due o più rischi sussidiari e nessun codice che fissi la riga della tabella 7.2.4
+const piuSussidiari = d => d.sub.length > 1 && !d.sg.some(k => SG_COME[k] || k === 'SG69') && !(d.sg.includes('SG68') && d.o.pf60);
+
+function cgVoceHTML(it, n) {
+  const R = DATA.dgl[it.u], d = cgDati(it), o = it.opz || {};
+  let h = `<div class="cgv"><div><b>${n}. UN ${esc(it.u)}</b> – ${esc(d.nome.length > 90 ? d.nome.slice(0, 90) + '…' : d.nome)} <span class="small">(classe ${esc(d.cl)}${d.sub.length ? ', sussidiari ' + esc(d.sub.join('/')) : ''}${d.pg && d.pg !== '–' ? ', GI ' + esc(d.pg) : ''}${d.r['16b'] && d.r['16b'] !== '–' ? ', 16b ' + esc(d.r['16b']) : ''})</span></div><div class="row">`;
+  if (R.length > 1) h += `<select data-k="i" data-n="${n - 1}">${R.map((r, j) => `<option value="${j}"${j === (it.i || 0) ? ' selected' : ''}>voce ${j + 1}: ${esc(r['2'].slice(0, 60))}${r['5'] && r['5'] !== '–' ? ' – GI ' + esc(r['5']) : ''}</option>`).join('')}</select>`;
+  h += `<label class="ck"><input type="checkbox" data-k="lq" data-n="${n - 1}"${it.lq ? ' checked' : ''}> quantità limitate</label><label class="ck"><input type="checkbox" data-k="eq" data-n="${n - 1}"${it.eq ? ' checked' : ''}> quantità esenti</label>`;
+  if (d.r['3'] === '2') h += `<select data-k="div2" data-n="${n - 1}">${['2.1', '2.2', '2.3'].map(x => `<option${x === (o.div2 || '2.2') ? ' selected' : ''}>${x}</option>`).join('')}</select>`;
+  if (d.sg.includes('SG69')) h += `<label class="ck"><input type="checkbox" data-k="aer1L" data-n="${n - 1}"${o.aer1L !== false ? ' checked' : ''}> capacità fino a 1 L</label>`;
+  if (d.sg.includes('SG68')) h += `<label class="ck"><input type="checkbox" data-k="pf60" data-n="${n - 1}"${o.pf60 ? ' checked' : ''}> punto di infiammabilità ≤ 60 °C</label>`;
+  if (/See/.test(d.r['4'] || '')) h += `<input type="text" data-k="sub" data-n="${n - 1}" value="${esc(o.sub || '')}" placeholder="rischi sussidiari (${esc(d.r['4'].replace(/^–\s*/, ''))})" style="width:12em">`;
+  if (d.nos) h += `<input type="text" data-k="sgg" data-n="${n - 1}" value="${esc(o.sgg || '')}" placeholder="gruppo SGG dal documento di trasporto" style="width:15em">`;
+  h += `<button type="button" class="sec mini" data-k="via" data-n="${n - 1}">Togli</button></div>`;
+  if (piuSussidiari(d)) h += `<div class="warn">Due o più rischi sussidiari (${esc(d.sub.join(', '))}): secondo 7.2.3.4 le prescrizioni sono quelle della colonna 16b; la tabella 7.2.4 si applica solo alla classe principale.<label class="ck"><input type="checkbox" data-k="subTab" data-n="${n - 1}"${o.subTab ? ' checked' : ''}> considera anche i rischi sussidiari nella tabella 7.2.4 (scelta oltre il testo del Codice, indicata nel report)</label></div>`;
+  const al = alimenti(d), fl = [al && 'Alimenti: ' + al];
+  for (const k of d.sg) if (['SG23', 'SG41', 'SG57', 'SG71', 'SG72', 'SG29', 'SG50'].includes(k)) fl.push(`${k}: ${DATA.imdgCod.SG[k]}`);
+  if (fl.filter(Boolean).length) h += `<p class="small">${fl.filter(Boolean).map(esc).join(' · ')}</p>`;
+  if (d.cl === '1' && d.u === '0190') h += '<p class="small">Campioni di esplosivo: divisione e gruppo di compatibilità non indicati nella DGL; si usa la divisione 1.1, la più severa, e nessuna compatibilità con altre merci della classe 1.</p>';
+  return h + '</div>';
+}
+const cella = p => `<td class="n cgl${p.lev}">${p.lev ? p.lev : '–'}${p.levDer < p.lev ? '<sup>d</sup>' : ''}${p.levCond > p.lev ? '*' : ''}${p.motivi.some(m => m.opz && m.lev === p.lev && p.lev) ? '<sup>u</sup>' : ''}</td>`;
+function caricoRisHTML(perStampa = false) {
+  const D = carico.map(cgDati), n = D.length, cls = perStampa ? 'nota' : 'small';
+  if (n < 2) return `<p class="${cls}">Aggiungere almeno due merci.</p>`;
+  const P = {};
+  for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) P[a + '-' + b] = coppia(D[a], D[b]);
+  let h = `<h3>Matrice di segregazione</h3><div class="scroll"><table class="segr cgm"><tr><th></th>${D.map((d, j) => `<th>${j + 1}</th>`).join('')}</tr>`;
+  D.forEach((d, a) => { h += `<tr><td>${a + 1}. UN ${esc(d.u)}</td>${D.map((e, b) => a === b ? '<td class="n">·</td>' : cella(P[Math.min(a, b) + '-' + Math.max(a, b)])).join('')}</tr>`; });
+  h += `</table></div><p class="${cls}">${[0, 1, 2, 3, 4].map(l => `${l || '–'} = ${l ? TERMINE[l] + ' (' + TERMINE_IT[l] + ')' : TERMINE_IT[0]}`).join(' · ')}. <sup>d</sup> = deroga possibile (7.2.6.1 o 7.2.6.5) se ne ricorrono le condizioni; * = prescrizione più severa se ricorrono condizioni da verificare sulla merce; <sup>u</sup> = livello dovuto alla scelta dell'utente di considerare i rischi sussidiari oltre 7.2.3.4.</p>`;
+  const usati = [1, 2, 3, 4].filter(l => Object.values(P).some(p => p.lev === l || p.levCond === l));
+  if (usati.length) h += `<h3>A bordo: portacontainer con stive chiuse, container chiusi (7.4.3.2)</h3><div class="scroll"><table class="segr"><tr><th>Termine</th><th>Verticale</th><th>Longitudinale in coperta</th><th>Longitudinale sotto coperta</th><th>Trasversale in coperta</th><th>Trasversale sotto coperta</th></tr>${usati.map(l => `<tr><td>${l} ${esc(TERMINE[l])}</td>${NAVE[l].map(x => `<td>${esc(x)}</td>`).join('')}</tr>`).join('')}</table></div><p class="${cls}">Spazio container: almeno 6 m in senso longitudinale o 2,4 m in senso trasversale (7.4.3.1.1). Paratie e ponti resistenti al fuoco e ai liquidi.</p>`;
+  h += '<h3>Dettaglio per coppia</h3>';
+  for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) {
+    const p = P[a + '-' + b], cond = p.motivi.filter(m => m.cond && m.lev > p.lev), der = p.motivi.filter(m => m.der && !m.cond && m.lev > p.levDer);
+    const titolo = `${a + 1}–${b + 1}: UN ${D[a].u} / UN ${D[b].u} → <b>${p.lev ? TERMINE[p.lev] : TERMINE_IT[0]}</b>${p.levDer < p.lev ? ` (deroga possibile: ${p.levDer ? TERMINE[p.levDer] : TERMINE_IT[0]})` : ''}${cond.length ? ' *' : ''}`;
+    const ctu = p.lev === 0 ? (p.ctu ? 'ammesse nella stessa unità di trasporto' : 'non nella stessa unità di trasporto') : p.lev === 1 ? 'non nella stessa unità di trasporto, salvo approvazione dell\'autorità competente con un livello di sicurezza equivalente (7.3.4.1); non nello stesso imballaggio esterno (7.2.3.2)' : 'non nella stessa unità di trasporto né nello stesso imballaggio esterno (7.2.3.2, 7.3.4.1)';
+    let c = `<ul class="${perStampa ? '' : 'ip'}">${p.motivi.filter(m => !m.cond && !(m.der && m.lev > p.levDer)).map(m => `<li>${esc(m.txt)}</li>`).join('')}`;
+    c += der.map(m => `<li>${esc(m.txt)} – <i>${esc(typeof m.der === 'string' ? m.der : 'derogabile secondo 7.2.6.1 se le merci non reagiscono pericolosamente fra loro')}</i></li>`).join('');
+    c += cond.map(m => `<li>* ${esc(m.txt)} – <i>${esc(m.cond)}</i></li>`).join('');
+    c += p.note.map(t => `<li class="${cls}">${esc(t)}</li>`).join('');
+    c += `<li><b>Unità di trasporto</b>: ${esc(ctu)}</li>`;
+    c += '</ul>';
+    h += perStampa ? `<p class="coppia">${titolo}</p>${c}` : `<details${p.lev || cond.length ? ' open' : ''}><summary>${titolo}</summary>${c}</details>`;
+  }
+  const scelte = D.filter(d => piuSussidiari(d) && d.o.subTab).map(d => 'UN ' + d.u);
+  h += `<p class="${cls}">Ipotesi della verifica: tabella 7.2.4 con la classe principale e, se la DGL indica un solo rischio sussidiario, anche con quello (7.2.3.3); con due o più rischi sussidiari valgono le prescrizioni della colonna 16b (7.2.3.4)${scelte.length ? `; per ${scelte.join(', ')} l'utente ha scelto di applicare la tabella 7.2.4 anche ai rischi sussidiari, oltre quanto previsto da 7.2.3.4` : ''}; i codici “come per la classe” sostituiscono la riga della classe principale (7.2.6.2); nei codici “classe …” della colonna 16b la classe comprende i rischi sussidiari (7.2.2.2); prevale la prescrizione più severa e la colonna 16b prevale sulla tabella (7.2.3.1). Le prescrizioni per le navi ro-ro (7.5), da carico generale (7.6) e le chiatte (7.7) non sono riportate. Verifica di supporto tecnico: la responsabilità della segregazione resta di chi prepara il carico.</p>`;
+  return h;
+}
+function mostraCarico() {
+  carico = carico.filter(it => DATA.dgl[it.u]);
+  $('cgLista').innerHTML = carico.length ? carico.map((it, j) => cgVoceHTML(it, j + 1)).join('') : '<p class="small">Nessuna merce nel carico.</p>';
+  $('cgRis').innerHTML = caricoRisHTML();
+  $('cgN').textContent = carico.length ? ` (${carico.length})` : '';
+  salvaCarico();
+}
+function aggiungi(u, i = 0) {
+  u = String(u || '').replace(/\D/g, '').padStart(4, '0');
+  if (!DATA.dgl[u]) { $('cgMsg').textContent = `UN ${u} non è nella Dangerous Goods List.`; return false; }
+  $('cgMsg').textContent = ''; carico.push({ u, i, opz: {} }); return true;
+}
+
+// ---------- ricerca per numero ONU o per nome ----------
+const norma = s => s.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Z0-9]+/g, ' ').trim();
+let indice = null;
+function cerca(q) {
+  const box = $('cgRes'); box.innerHTML = '';
+  const t = q.trim(); if (!t) return;
+  if (/^\d{1,4}$/.test(t)) {
+    const u = t.padStart(4, '0'), R = DATA.dgl[u];
+    if (t.length < 4 || !R) { box.innerHTML = t.length === 4 ? '<p class="small">Numero non presente nella DGL.</p>' : ''; return; }
+    box.innerHTML = R.map((r, j) => `<button type="button" class="res" data-u="${u}" data-i="${j}"><b>UN ${u}</b>${R.length > 1 ? `voce ${j + 1}: ` : ''}${esc(r['2'].slice(0, 110))} <span class="small">– classe ${esc(r['3'])}${r['5'] && r['5'] !== '–' ? ', GI ' + esc(r['5']) : ''}</span></button>`).join('');
+    return;
+  }
+  const p = norma(t).split(' ').filter(Boolean); if (!p.length || p.join('').length < 3) return;
+  if (!indice) { indice = []; for (const [u, R] of Object.entries(DATA.dgl)) R.forEach((r, j) => indice.push([u, j, norma(r['2']), r])); }
+  const hit = indice.filter(x => p.every(w => x[2].includes(w)));
+  hit.sort((a, b) => (b[2].startsWith(p[0]) - a[2].startsWith(p[0])) || a[2].length - b[2].length);
+  box.innerHTML = hit.slice(0, 30).map(([u, j, , r]) => `<button type="button" class="res" data-u="${u}" data-i="${j}"><b>UN ${u}</b>${esc(r['2'].slice(0, 110))} <span class="small">– classe ${esc(r['3'])}${r['5'] && r['5'] !== '–' ? ', GI ' + esc(r['5']) : ''}</span></button>`).join('')
+    + (hit.length > 30 ? `<p class="small">Altre ${hit.length - 30} voci: precisare la ricerca.</p>` : '') + (hit.length ? '' : '<p class="small">Nessuna voce trovata.</p>');
+}
+$('cgU').addEventListener('input', () => cerca($('cgU').value));
+$('cgU').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return; e.preventDefault();
+  const r = $('cgRes').querySelectorAll('.res'); if (r.length === 1) r[0].click();
+});
+$('cgRes').addEventListener('click', e => {
+  const b = e.target.closest('.res'); if (!b) return;
+  if (aggiungi(b.dataset.u, +b.dataset.i)) { $('cgU').value = ''; $('cgRes').innerHTML = ''; mostraCarico(); $('cgU').focus(); }
+});
+$('cgVuota').onclick = () => { if (!carico.length || confirm('Togliere tutte le merci dal carico?')) { carico = []; mostraCarico(); } };
+$('cgLista').addEventListener('change', e => {
+  const t = e.target, n = +t.dataset.n, k = t.dataset.k; if (!k || !carico[n]) return;
+  const it = carico[n]; it.opz = it.opz || {};
+  if (k === 'i') it.i = +t.value; else if (k === 'lq' || k === 'eq') it[k] = t.checked;
+  else if (['aer1L', 'pf60', 'subTab'].includes(k)) it.opz[k] = t.checked; else it.opz[k] = t.value;
+  mostraCarico();
+});
+$('cgLista').addEventListener('click', e => { const t = e.target; if (t.dataset.k === 'via') { carico.splice(+t.dataset.n, 1); mostraCarico(); } });
+
+// ---------- report stampabile ----------
+$('cgPrint').onclick = () => {
+  if (carico.length < 2) { $('cgMsg').textContent = 'Aggiungere almeno due merci.'; return; }
+  const s = leggiImpostazioni(), quando = new Date().toLocaleString('it-IT', { dateStyle: 'long', timeStyle: 'short' }), rif = $('cgRif').value.trim();
+  let h = s.carta ? cartaHTML() : '';
+  h += `<div class="intest"><h1>Verifica di segregazione del carico</h1><table class="dati"><tr><td>Data di redazione</td><td>${esc(quando)}</td></tr>${rif ? `<tr><td>Carico</td><td>${esc(rif)}</td></tr>` : ''}<tr><td>Riferimenti</td><td>IMDG Code, Emendamento 42-24 (Ris. MSC.556(108)), capitoli 3.4, 3.5, 7.2, 7.3 e 7.4</td></tr></table></div>`;
+  h += '<h3>Merci del carico</h3><table class="dati merci">' + carico.map((it, j) => { const d = cgDati(it); return `<tr><td>${j + 1}. UN ${esc(d.u)}</td><td>${esc(d.nome)} – classe ${esc(d.cl)}${d.sub.length ? ', rischi sussidiari ' + esc(d.sub.join('/')) : ''}${d.pg && d.pg !== '–' ? ', GI ' + esc(d.pg) : ''}; 16b: ${esc(d.r['16b'] || '–')}${d.sgg.length && d.o.sgg ? '; gruppo dichiarato ' + esc(d.o.sgg) : ''}${it.lq ? '; quantità limitate' : ''}${it.eq ? '; quantità esenti' : ''}${piuSussidiari(d) && d.o.subTab ? '; tabella 7.2.4 applicata anche ai rischi sussidiari per scelta dell\'utente' : ''}${alimenti(d) ? '; alimenti: ' + esc(alimenti(d)) : ''}</td></tr>`; }).join('') + '</table>';
+  h += caricoRisHTML(true);
+  h += `<p class="nota">Parere tecnico di supporto redatto con l'app Verifica di segregazione v${VERSIONE}: non è un atto amministrativo e non sostituisce la consultazione del testo ufficiale del Codice IMDG.</p>`;
+  h += `<div class="firma"><div class="firmatario">${esc(s.nome)}</div><div>${esc(s.qualifica)}</div><div class="linea">Firma ____________________________</div></div>`;
+  $('report').innerHTML = h; window.print();
+};
+
+// ---------- avvio ----------
+(function avvio() {
+  // collegamento da altre app: ?u=1203,1090 aggiunge le merci al carico
+  const q = new URLSearchParams(location.search).get('u');
+  if (q) { q.split(/[,\s;]+/).filter(Boolean).forEach(u => aggiungi(u)); history.replaceState(null, '', location.pathname); }
+  mostraCarico();
+})();
+function aggiornaRete() { $('netstato').textContent = navigator.onLine ? '' : ' · offline'; }
+window.addEventListener('online', aggiornaRete); window.addEventListener('offline', aggiornaRete); aggiornaRete();
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}

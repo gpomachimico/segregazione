@@ -1,0 +1,16 @@
+{
+  "name": "Verifica di segregazione del carico – IMDG",
+  "short_name": "Segregazione",
+  "description": "Segregazione delle merci pericolose in un carico secondo il Codice IMDG (capitolo 7.2). Parere tecnico di supporto, non atto amministrativo.",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f5f2",
+  "theme_color": "#1f4e79",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

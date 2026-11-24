@@ -1,0 +1,22 @@
+# Prova nel browser: python3 test/browser.py (con un server locale sulla cartella dell'app, porta 8766)
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+    b = p.chromium.launch(executable_path='/usr/bin/google-chrome'); ctx = b.new_context(viewport={'width': 430, 'height': 900}); pg = ctx.new_page()
+    errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+    pg.goto('http://localhost:8766/index.html?u=1017,1005'); pg.wait_for_timeout(1200); pg.evaluate("window.print=()=>{}")
+    print('da URL', pg.locator('.cgv').count(), pg.url)
+    pg.fill('#cgU', 'acetone'); pg.wait_for_timeout(300); print('ricerca nome', pg.locator('#cgRes .res').count(), pg.inner_text('#cgRes')[:80])
+    pg.locator('#cgRes .res').first.click(); pg.wait_for_timeout(200)
+    for u in ['1789', '1824', '2683']:
+        pg.fill('#cgU', u); pg.wait_for_timeout(150); pg.press('#cgU', 'Enter'); pg.wait_for_timeout(150)
+    pg.fill('#cgU', '9999'); pg.wait_for_timeout(150); print('9999:', pg.inner_text('#cgRes'))
+    print('avviso 7.2.3.4', pg.locator('input[data-k=subTab]').count())
+    pg.locator('input[data-k=subTab]').check(); pg.wait_for_timeout(200)
+    t = pg.inner_text('#cgRis'); print(len(t), 'BAD' if ('undefined' in t or 'NaN' in t) else 'ok')
+    pg.locator('#cgLista input[data-k=lq]').nth(1).check(); pg.wait_for_timeout(200)
+    pg.fill('#cgRif', 'M/V Prova, container ABCU1234567')
+    pg.screenshot(path='/tmp/app.png', full_page=True)
+    pg.click('#cgPrint'); rep = pg.inner_text('#report'); print('REP', len(rep), 'BAD' if 'undefined' in rep else 'ok', 'scelta utente' if "scelta dell'utente" in rep else 'NO SCELTA')
+    pg.emulate_media(media='print'); pg.pdf(path='/tmp/report.pdf', format='A4'); pg.emulate_media(media='screen')
+    pg.reload(); pg.wait_for_timeout(1000); print('persist', pg.locator('.cgv').count())
+    print('ERR', errs); b.close()
