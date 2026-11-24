@@ -1,6 +1,6 @@
 /* Verifica di segregazione del carico – interfaccia, impostazioni, report stampabile, uso offline */
 'use strict';
-const VERSIONE = '1.1-beta';
+const VERSIONE = '1.2-beta';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -73,8 +73,8 @@ function bordoHTML(D, P, cls) { // 7.4.3.2 / 7.4.3.3 per le coppie con segregazi
     const [a, b] = k.split('-').map(Number), lv = [p.lev, p.levCond > p.lev ? p.levCond : 0].filter(Boolean);
     lv.forEach((l, j) => righe.push([a, b, l, j > 0]));
   }
-  if (!righe.length) return '';
   const T = TAB_CNT[nave.tipo];
+  if (!righe.length) return `<h3>A bordo: ${esc(NAVE_TIPO[nave.tipo])}</h3><p class="${cls}">Nessuna coppia del carico richiede segregazione: nessuna prescrizione della tabella ${T.par}.</p>`;
   let h = `<h3>A bordo: ${esc(NAVE_TIPO[nave.tipo])}</h3><div class="scroll"><table class="segr bordo"><tr><th>Coppia</th><th>Vertical</th><th>Fore and aft<br>on deck</th><th>Fore and aft<br>under deck</th><th>Athwartships<br>on deck</th><th>Athwartships<br>under deck</th></tr>`;
   for (const [a, b, l, cond] of righe) {
     const cm = combo(D[a], D[b]), bo = bordo(l, cm, nave.tipo);
@@ -204,5 +204,8 @@ $('cgPrint').onclick = () => {
 function aggiornaRete() { $('netstato').textContent = navigator.onLine ? '' : ' · offline'; }
 window.addEventListener('online', aggiornaRete); window.addEventListener('offline', aggiornaRete); aggiornaRete();
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').then(r => r.update()).catch(() => {}));
+  // nuova versione installata: si ricarica una volta la pagina, così non restano in uso i file della versione precedente
+  let ricaricata = false;
+  if (navigator.serviceWorker.controller) navigator.serviceWorker.addEventListener('controllerchange', () => { if (!ricaricata) { ricaricata = true; location.reload(); } });
 }
