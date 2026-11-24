@@ -1,6 +1,6 @@
 /* Verifica di segregazione del carico – interfaccia, impostazioni, report stampabile, uso offline */
 'use strict';
-const VERSIONE = '1.3-beta';
+const VERSIONE = '1.4-beta';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -42,6 +42,7 @@ try { carico = JSON.parse(localStorage.getItem('carico') || '[]'); } catch (e) {
 const salvaCarico = () => { try { localStorage.setItem('carico', JSON.stringify(carico)); localStorage.setItem('nave', JSON.stringify(nave)); } catch (e) { } };
 // nave (v1.1): tipo di portacontainer, coperchi delle boccaporte, nave costruita prima delle date di 7.4.2.3.1 e 7.4.2.4.1
 let nave = { tipo: 'chiuse', copert: 'stagni', vecchia: false };
+let tabBordo = false; try { tabBordo = localStorage.getItem('tabBordo') === '1'; } catch (e) { }
 try { nave = Object.assign(nave, JSON.parse(localStorage.getItem('nave') || '{}')); } catch (e) { }
 const NAVE_TIPO = { chiuse: 'portacontainer con stive chiuse (7.4.3.2)', senza: 'portacontainer senza boccaporti (hatchless, 7.4.3.3)' };
 const COPERT = { stagni: 'coperchi delle boccaporte stagni', gutter: 'coperchi parzialmente stagni con gutterbar efficaci (7.4.2.2.1)', nogutter: 'coperchi parzialmente stagni senza gutterbar efficaci (7.4.2.2.2)' };
@@ -67,7 +68,7 @@ function cgVoceHTML(it, n) {
   return h + '</div>';
 }
 const cella = p => `<td class="n cgl${p.lev}">${p.lev ? p.lev : '–'}${p.levDer < p.lev ? '<sup>d</sup>' : ''}${p.levCond > p.lev ? '*' : ''}${p.motivi.some(m => m.opz && m.lev === p.lev && p.lev) ? '<sup>u</sup>' : ''}</td>`;
-function bordoHTML(D, P, cls) { // 7.4.3.2 / 7.4.3.3 per le coppie con segregazione, secondo container chiusi o aperti
+function bordoHTML(D, P, cls, perStampa) { // 7.4.3.2 / 7.4.3.3 per le coppie con segregazione, secondo container chiusi o aperti
   const righe = [];
   for (const [k, p] of Object.entries(P)) {
     const [a, b] = k.split('-').map(Number), lv = [p.lev, p.levCond > p.lev ? p.levCond : 0].filter(Boolean);
@@ -75,12 +76,16 @@ function bordoHTML(D, P, cls) { // 7.4.3.2 / 7.4.3.3 per le coppie con segregazi
   }
   const T = TAB_CNT[nave.tipo];
   if (!righe.length) return `<h3>A bordo: ${esc(NAVE_TIPO[nave.tipo])}</h3><p class="${cls}">Nessuna coppia del carico richiede segregazione: nessuna prescrizione della tabella ${T.par}.</p>`;
-  let h = `<h3>A bordo: ${esc(NAVE_TIPO[nave.tipo])}</h3><div class="scroll"><table class="segr bordo"><tr><th>Coppia</th><th>Verticale</th><th>Longitudinale<br>in coperta</th><th>Longitudinale<br>sotto coperta</th><th>Trasversale<br>in coperta</th><th>Trasversale<br>sotto coperta</th></tr>`;
-  for (const [a, b, l, cond] of righe) {
+  // tabella delle coppie: sullo schermo solo a richiesta, nel report solo se attivata (richiesta di Luca, v1.4)
+  let h = `<h3>A bordo: ${esc(NAVE_TIPO[nave.tipo])}</h3>`;
+  if (!perStampa) h += `<button type="button" class="sec mini" id="btnBordo" aria-pressed="${tabBordo}">${tabBordo ? 'Nascondi la tabella delle coppie' : 'Mostra la tabella delle coppie (sarà riportata anche nel report)'}</button>`;
+  if (!tabBordo) h += `<p class="${cls}">${perStampa ? '' : 'Tabella non attiva. '}Le prescrizioni a bordo di ogni coppia (tabella ${T.par}, testo originale) sono nel dettaglio per coppia.</p>`;
+  else h += `<div class="scroll"><table class="segr bordo"><tr><th>Coppia</th><th>Verticale</th><th>Longitudinale<br>in coperta</th><th>Longitudinale<br>sotto coperta</th><th>Trasversale<br>in coperta</th><th>Trasversale<br>sotto coperta</th></tr>`;
+  if (tabBordo) for (const [a, b, l, cond] of righe) {
     const cm = combo(D[a], D[b]), bo = bordo(l, cm, nave.tipo);
     h += `<tr><td>${a + 1}–${b + 1}${cond ? ' *' : ''}<br><span class="small">${esc(TERMINE_IT[l])}; ${COMBO_IT[cm]}</span></td>${[bo.v, bo.faOn, bo.faUnder, bo.atOn, bo.atUnder].map(x => `<td title="${esc(x)}">${esc(trad(x))}</td>`).join('')}</tr>`;
   }
-  h += `</table></div><p class="${cls}">Tabella ${T.par} (“${T.nome}”), traduzione di lavoro: fa fede il testo inglese del Codice, riportato nel dettaglio di ogni coppia. Spazio container: almeno 6 m in senso longitudinale o almeno 2,4 m in senso trasversale (7.4.3.1.1). * Container ad almeno 6 m dalla paratia intermedia. Tutte le paratie e i ponti devono essere resistenti al fuoco e ai liquidi. Righe con * a sinistra: valgono se ricorrono le condizioni indicate nel dettaglio della coppia. Container aperto: unità che non è chiusa, cioè che non racchiude interamente il contenuto con strutture permanenti a pareti complete e rigide; le unità con pareti o tetto in telone non sono chiuse (definizioni del capitolo 1.2; per la classe 1, 7.1.2).</p>`;
+  if (tabBordo) h += `</table></div><p class="${cls}">Tabella ${T.par} (“${T.nome}”), traduzione di lavoro: fa fede il testo inglese del Codice, riportato nel dettaglio di ogni coppia. Spazio container: almeno 6 m in senso longitudinale o almeno 2,4 m in senso trasversale (7.4.3.1.1). * Container ad almeno 6 m dalla paratia intermedia. Tutte le paratie e i ponti devono essere resistenti al fuoco e ai liquidi. Righe con * a sinistra: valgono se ricorrono le condizioni indicate nel dettaglio della coppia. Container aperto: unità che non è chiusa, cioè che non racchiude interamente il contenuto con strutture permanenti a pareti complete e rigide; le unità con pareti o tetto in telone non sono chiuse (definizioni del capitolo 1.2; per la classe 1, 7.1.2).</p>`;
   const vert = righe.some(r => r[2] >= 2) || righe.some(r => r[2] === 1 && combo(D[r[0]], D[r[1]]) !== 'CC');
   if (nave.tipo === 'chiuse' && nave.copert === 'gutter') h += `<p class="${cls}">Coperchi parzialmente stagni con gutterbar efficaci: considerati “resistant to fire and liquid” (7.4.2.2.1.1)${vert ? '; dove è richiesto “not in the same vertical line unless separated by a deck”, i container con merci pericolose non nei tier direttamente sopra un clear gap, salvo stiva conforme a SOLAS II-2/19 (II-2/54), e container con merci incompatibili non entro le relevant sensitive vertical lines sotto coperta (7.4.2.2.1.2; definizioni in MSC/Circ.1087)' : ''}.</p>`;
   if (nave.tipo === 'chiuse' && nave.copert === 'nogutter') h += `<p class="${cls}">Coperchi parzialmente stagni senza gutterbar efficaci: container con merci pericolose non sui coperchi, salvo stiva conforme a SOLAS II-2/19 (II-2/54) (7.4.2.2.2.1); container con merci incompatibili non entro le relevant sensitive vertical lines dei clear gap, sia con merci in coperta sia con merci sotto coperta (7.4.2.2.2.2–7.4.2.2.2.4; definizioni in MSC/Circ.1087).</p>`;
@@ -103,7 +108,7 @@ function caricoRisHTML(perStampa = false) {
   let h = `<h3>Matrice di segregazione</h3><div class="scroll"><table class="segr cgm"><tr><th></th>${D.map((d, j) => `<th>${j + 1}</th>`).join('')}</tr>`;
   D.forEach((d, a) => { h += `<tr><td>${a + 1}. UN ${esc(d.u)}</td>${D.map((e, b) => a === b ? '<td class="n">·</td>' : cella(P[Math.min(a, b) + '-' + Math.max(a, b)])).join('')}</tr>`; });
   h += `</table></div><p class="${cls}">${[0, 1, 2, 3, 4].map(l => `${l || '–'} = ${l ? TERMINE[l] + ' (' + TERMINE_IT[l] + ')' : TERMINE_IT[0]}`).join(' · ')}. <sup>d</sup> = deroga possibile (7.2.6.1 o 7.2.6.5) se ne ricorrono le condizioni; * = prescrizione più severa se ricorrono condizioni da verificare sulla merce; <sup>u</sup> = livello dovuto alla scelta dell'utente di considerare i rischi sussidiari oltre 7.2.3.4.</p>`;
-  h += bordoHTML(D, P, cls);
+  h += bordoHTML(D, P, cls, perStampa);
   h += '<h3>Dettaglio per coppia</h3>';
   for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) {
     const p = P[a + '-' + b], cond = p.motivi.filter(m => m.cond && m.lev > p.lev), der = p.motivi.filter(m => m.der && !m.cond && m.lev > p.levDer);
@@ -171,6 +176,11 @@ $('cgLista').addEventListener('change', e => {
   if (k === 'i') it.i = +t.value; else if (k === 'lq' || k === 'eq') it[k] = t.checked;
   else if (['aer1L', 'pf60', 'subTab', 'aperto'].includes(k)) it.opz[k] = t.checked; else it.opz[k] = t.value;
   mostraCarico();
+});
+$('cgRis').addEventListener('click', e => {
+  if (e.target.id !== 'btnBordo') return;
+  tabBordo = !tabBordo; try { localStorage.setItem('tabBordo', tabBordo ? '1' : '0'); } catch (er) { }
+  mostraCarico(); const b = $('btnBordo'); if (b) b.focus();
 });
 $('cgLista').addEventListener('click', e => { const t = e.target; if (t.dataset.k === 'via') { carico.splice(+t.dataset.n, 1); mostraCarico(); } });
 
