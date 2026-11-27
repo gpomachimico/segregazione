@@ -2,8 +2,8 @@
    - installazione: i file dell'app si scaricano dal server ignorando la cache HTTP del browser (cache: 'reload'),
      così una nuova versione non mescola file vecchi e nuovi;
    - uso: prima la rete (al massimo 4 s), poi la copia salvata; senza rete l'app funziona con i file salvati. */
-const VERSIONE = 'segregazione-1.14-beta-1';
-const APP = ['./', 'index.html', 'manifest.webmanifest', 'css/app.css', 'js/imdg.js', 'js/regole.js', 'js/app.js',
+const VERSIONE = 'segregazione-1.15-beta-1';
+const APP = ['./', 'index.html', 'manifest.webmanifest', 'css/app.css', 'js/imdg.js', 'js/regole.js', 'js/app.js', 'js/scheda.js', 'js/ems.js', 'js/onu.js', 'js/imballaggi.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png', 'img/logo-scp.jpg'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSIONE).then(c => Promise.all(APP.map(u => fetch(new Request(u, { cache: 'reload' })).then(r => {

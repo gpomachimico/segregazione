@@ -1,6 +1,6 @@
 /* Verifica di segregazione del carico – interfaccia, impostazioni, report stampabile, uso offline */
 'use strict';
-const VERSIONE = '1.14-beta';
+const VERSIONE = '1.15-beta';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -62,7 +62,7 @@ function cgVoceHTML(it, n) {
   if (d.sg.includes('SG68')) h += `<label class="ck"><input type="checkbox" data-k="pf60" data-n="${n - 1}"${o.pf60 ? ' checked' : ''}> punto di infiammabilità ≤ 60 °C</label>`;
   if (/See/.test(d.r['4'] || '')) h += `<input type="text" data-k="sub" data-n="${n - 1}" value="${esc(o.sub || '')}" placeholder="rischi sussidiari (${esc(d.r['4'].replace(/^–\s*/, ''))})" style="width:12em">`;
   if (d.nos) h += `<input type="text" data-k="sgg" data-n="${n - 1}" value="${esc(o.sgg || '')}" placeholder="gruppo SGG dal documento di trasporto" style="width:15em">`;
-  h += `<button type="button" class="sec mini" data-k="via" data-n="${n - 1}">Togli</button></div>`;
+  h += `<button type="button" class="sec mini" data-k="scheda" data-n="${n - 1}">Scheda</button><button type="button" class="sec mini" data-k="via" data-n="${n - 1}">Togli</button></div>`;
   if (piuSussidiari(d)) h += `<div class="warn">Due o più rischi sussidiari (${esc(d.sub.join(', '))}): secondo 7.2.3.4 le prescrizioni sono quelle della colonna 16b; la tabella 7.2.4 si applica solo alla classe principale.<label class="ck"><input type="checkbox" data-k="subTab" data-n="${n - 1}"${o.subTab ? ' checked' : ''}> considera anche i rischi sussidiari nella tabella 7.2.4 (scelta oltre il testo del Codice, indicata nel report)</label></div>`;
   const VM = verificaModalita(d, nave);
   if (VM.length) h += VM.map(v => `<p class="${v.liv === 'errore' ? 'err' : 'warn'}">${v.liv === 'errore' ? 'Non ammesso' : 'Attenzione'}: ${esc(v.txt)} <span class="small">(${esc(v.par)})</span></p>`).join('');

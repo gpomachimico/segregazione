@@ -17,7 +17,7 @@
   <div class="hrow">
     <div>
       <h1>Verifica di segregazione del carico</h1>
-      <p>v1.14-beta · IMDG Code 42-24, capitoli 7.2, 7.4, 7.5 e 7.6 · parere tecnico di supporto, non atto amministrativo<span id="netstato"></span></p>
+      <p>v1.15-beta · IMDG Code 42-24, capitoli 7.2, 7.4, 7.5 e 7.6 · parere tecnico di supporto, non atto amministrativo<span id="netstato"></span></p>
     </div>
     <button id="btnSet" class="icon" type="button" aria-label="Impostazioni">⚙</button>
   </div>
@@ -47,6 +47,13 @@
   <button id="cgVuota" type="button" class="sec">Svuota il carico</button>
 </section>
 
+<section class="card hide" id="schedacard">
+  <div class="hrow"><h2 id="schedaTit">Scheda merce</h2><button id="schedaChiudi" class="icon" type="button" aria-label="Chiudi la scheda">✕</button></div>
+  <div id="schedabox"></div>
+  <button id="schedaPrint" type="button">Stampa / salva PDF della scheda</button>
+  <div class="row small"><label class="ck"><input type="checkbox" id="stImb"> stampa anche i testi delle istruzioni di imballaggio e cisterne</label><label class="ck"><input type="checkbox" id="stEms"> stampa anche i testi delle schede EmS</label></div>
+</section>
+
 <section class="card">
   <h2>2 · Nave</h2>
   <label for="nvTipo">Tipo di nave</label>
@@ -72,5 +79,6 @@
 <script src="js/imdg.js"></script>
 <script src="js/regole.js"></script>
 <script src="js/app.js"></script>
+<script src="js/scheda.js"></script>
 </body>
 </html>

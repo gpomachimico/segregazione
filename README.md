@@ -9,6 +9,7 @@ Indirizzo: https://gpomachimico.github.io/segregazione/
 - `js/imdg.js` – Dangerous Goods List e tabelle di decodifica del Codice IMDG 42-24, generato dagli script in `tools/` (stesso file dell'app aree di danno)
 - `js/regole.js` – regole di segregazione (senza interfaccia, usabile anche con Node)
 - `js/app.js` – inserimento delle merci, matrice, dettaglio per coppia, report stampabile, impostazioni
+- `js/scheda.js` – scheda merce (dall'app aree di danno), con `js/ems.js` (guida EmS), `js/imballaggi.js` (4.1.4, 4.2.5), `js/onu.js` (ERG 2024)
 - `sw.js`, `manifest.webmanifest`, `icons/` – installazione e uso offline
 - `test/` – `esempi.js` (esempi del Codice), `coppie.js` (200 000 coppie casuali), `bordo.js` (tabelle a bordo, rinfuse, bulk container, stivaggio di tutte le voci), `tabelle_it.js` (celle dell'edizione italiana), `modalita.js` (modalità di trasporto di tutte le voci), `browser.py` (prova nel browser)
 

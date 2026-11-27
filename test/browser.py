@@ -69,4 +69,9 @@ with sync_playwright() as p:
     print('classe 1 senza unità aperta', sel.nth(0).locator('option[value=aperta]').count() == 0, 'fusa solo cisterna', sel.nth(1).locator('option').count() == 1 and sel.nth(1).locator('option[value=cisterna]').count() == 1)
     print('cloro senza quantità limitate', pg.locator('#cgLista .cgv').nth(2).locator('input[data-k=lq]').count() == 0, 'UN 2186 vietata', 'trasporto vietato' in pg.locator('#cgLista .cgv').nth(3).text_content())
     print('avviso globale', pg.locator('#cgRis p.err').count() == 1)
+    # v1.15: scheda merce
+    pg.evaluate("localStorage.removeItem('carico')"); pg.goto('http://localhost:8766/index.html?u=1005,1993'); pg.wait_for_timeout(800); pg.evaluate('window.print=()=>{}')
+    pg.locator('button[data-k=scheda]').nth(0).click(); pg.wait_for_timeout(1500)
+    s = pg.text_content('#schedabox'); print('scheda', 'ERG 2024' in s and 'Schede EmS' in s and 'Tabella 1' in s)
+    pg.click('#schedaPrint'); print('stampa scheda', 'Scheda merce pericolosa – UN 1005' in pg.text_content('#report'))
     print('ERR', errs); b.close()
