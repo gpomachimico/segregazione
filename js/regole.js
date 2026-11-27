@@ -441,16 +441,20 @@ const TAB_BULK = {
 };
 const BULK_NOME = { '4.1': 'flammable solids', '4.2': 'substances liable to spontaneous combustion', '4.3': 'substances which, in contact with water, emit flammable gases', '5.1': 'oxidizing substances (agents)', '6.1': 'toxic substances', '7': 'radioactive material', '8': 'corrosive substances', '9': 'miscellaneous dangerous substances and articles', MHB: 'materials hazardous only in bulk (MHB)' };
 const colBulk = d => BULK_COL.findIndex(c => c.split(' ').includes(d.div));
-// definizioni di 7.6.3.5.3 (testo originale) e traduzione di lavoro, da verificare sull'edizione italiana
+// definizioni di 7.6.3.5.3: testo originale (en) e dell'edizione italiana (it, immagine fornita da Luca il 27/11/2026); sintesi sul ponte / sotto il ponte
 const DEF_BULK = {
   1: { en: 'Effectively segregated so that incompatible materials cannot interact dangerously in the event of an accident but may be transported in the same compartment or hold or on deck provided a minimum horizontal separation of 3 m, projected vertically, is provided.',
+    it: 'Effettivamente segregato così che le merci incompatibili non possano interagire pericolosamente in caso di un incidente ma possono essere trasportate nello stesso compartimento o stiva o sul ponte, a condizione che vi sia almeno una separazione orizzontale di 3 metri, proiettata verticalmente.',
     on: 'Almeno 3 m in orizzontale, proiettati verticalmente', under: 'Stesso compartimento o stiva ammesso, con almeno 3 m in orizzontale proiettati verticalmente' },
   2: { en: 'In different holds when stowed under deck. Provided an intervening deck is resistant to fire and liquid, a vertical separation, i.e. in different compartments, may be accepted as equivalent to this segregation.',
-    on: '–', under: 'In stive differenti; separazione verticale (compartimenti differenti) ammessa se il ponte intermedio è resistente al fuoco e ai liquidi' },
+    it: 'In differenti stive quando stivato sotto il ponte. A condizione che il ponte intermedio sia resistente al fuoco e ai liquidi, una separazione verticale, per esempio in differenti compartimenti, può essere accettata come equivalente a questa segregazione.',
+    on: '–', under: 'In differenti stive; separazione verticale (differenti compartimenti) accettata se il ponte intermedio è resistente al fuoco e ai liquidi' },
   3: { en: 'Either a vertical or a horizontal separation. If the decks are not resistant to fire and liquid, then only a longitudinal separation, i.e. by an intervening complete compartment, is acceptable.',
-    on: '–', under: 'Separazione verticale o orizzontale mediante un compartimento completo; se i ponti non sono resistenti al fuoco e ai liquidi, solo un compartimento completo intermedio in senso longitudinale' },
+    it: 'Separazione sia verticale che orizzontale. Se i ponti non sono resistenti al fuoco e ai liquidi, è accettabile allora soltanto una separazione longitudinale, per esempio mediante un compartimento completo intermedio.',
+    on: '–', under: 'Separazione sia verticale che orizzontale; se i ponti non sono resistenti al fuoco e ai liquidi, soltanto una separazione longitudinale (compartimento completo intermedio)' },
   4: { en: 'Vertical separation alone does not meet this requirement.',
-    on: '–', under: 'Compartimento completo intermedio in senso longitudinale; la sola separazione verticale non basta' }
+    it: 'La separazione verticale da sola non soddisfa questo requisito.',
+    on: '–', under: 'Compartimento completo intermedio in senso longitudinale; la separazione verticale da sola non soddisfa questo requisito' }
 };
 const lab = d => d.mhb ? 'MHB' : 'UN ' + d.u;
 // coppia del carico: con una rinfusa vale 7.6.3.5.2, fra due rinfuse il Codice IMSBC, altrimenti il capitolo 7.2

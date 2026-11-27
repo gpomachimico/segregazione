@@ -82,6 +82,8 @@ for (let k = 0; k < U.length; k++) {
     ok(p.lev === q.lev && p.motivi.every(z => !/undefined|NaN/.test(z.txt)), `rinfusa UN ${U[k]} con ${y.u || 'MHB'}`);
   }
 }
+for (const l of [1, 2, 3, 4]) ok(R.DEF_BULK[l].it && R.DEF_BULK[l].en && R.DEF_BULK[l].under, `7.6.3.5.3 definizione ${l}`);
+ok(/^In differenti stive quando stivato sotto il ponte/.test(R.DEF_BULK[2].it) && /^La separazione verticale da sola/.test(R.DEF_BULK[4].it), '7.6.3.5.3 testo dell\'edizione italiana');
 console.log(nb, 'coppie con rinfuse; errori', bad);
 // v1.10: rinfusa solo per i solidi; bulk container come unità di trasporto
 let liq = 0, nbk = 0;

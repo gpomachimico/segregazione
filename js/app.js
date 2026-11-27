@@ -1,6 +1,6 @@
 /* Verifica di segregazione del carico – interfaccia, impostazioni, report stampabile, uso offline */
 'use strict';
-const VERSIONE = '1.12-beta';
+const VERSIONE = '1.13-beta';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -123,7 +123,7 @@ function bordoHTML(D, P, cls, perStampa) { // tabella a bordo: 7.4.3.2, 7.4.3.3,
   const vert = righe.some(r => r[2] >= 2) || righe.some(r => r[2] === 1 && combo(D[r[0]], D[r[1]], t) !== 'CC');
   if (t === 'chiuse' && nave.copert === 'gutter') h += `<p class="${cls}">Coperchi parzialmente stagni con gutterbar efficaci: considerati “resistant to fire and liquid” (7.4.2.2.1.1)${vert ? '; dove è richiesto “not in the same vertical line unless separated by a deck”, i container con merci pericolose non nei tier direttamente sopra un clear gap, salvo stiva conforme a SOLAS II-2/19 (II-2/54), e container con merci incompatibili non entro le relevant sensitive vertical lines sotto il ponte (7.4.2.2.1.2; definizioni in MSC/Circ.1087)' : ''}.</p>`;
   if (t === 'chiuse' && nave.copert === 'nogutter') h += `<p class="${cls}">Coperchi parzialmente stagni senza gutterbar efficaci: container con merci pericolose non sui coperchi, salvo stiva conforme a SOLAS II-2/19 (II-2/54) (7.4.2.2.2.1); container con merci incompatibili non entro le relevant sensitive vertical lines dei clear gap, sia con merci sul ponte sia con merci sotto il ponte (7.4.2.2.2.2–7.4.2.2.2.4; definizioni in MSC/Circ.1087).</p>`;
-  if (D.some(d => d.rinfusa)) h += `<p class="${cls}">${t === 'generale' ? 'Coppie con una rinfusa: definizioni di 7.6.3.5.3 (testo originale nel dettaglio per coppia; sintesi in italiano come traduzione di lavoro). Fra due rinfuse: Codice IMSBC.' : 'Materiali alla rinfusa nel carico: la segregazione rinfusa–merci imballate (7.6.3.5) riguarda le navi da carico generale; scegliere questo tipo di nave per le prescrizioni a bordo.'}</p>`;
+  if (D.some(d => d.rinfusa)) h += `<p class="${cls}">${t === 'generale' ? 'Coppie con una rinfusa sciolta in stiva: sintesi delle definizioni di 7.6.3.5.3 (edizione italiana del Codice); fa fede il testo inglese, riportato nel dettaglio per coppia. Fra due rinfuse: Codice IMSBC.' : 'Materiali alla rinfusa nel carico: la segregazione rinfusa–merci imballate (7.6.3.5) riguarda le navi da carico generale; scegliere questo tipo di nave per le prescrizioni a bordo.'}</p>`;
   if (t === 'roro' && nave.vecchia) h += `<p class="${cls}">Nave con chiglia impostata prima del 1/9/1984: negli spazi ro-ro chiusi a cui non si applicano SOLAS II-2/20 (o II-2/37 e 38) ventilazione meccanica a giudizio dell'Amministrazione, sempre in funzione con veicoli a bordo (7.5.2.11).</p>`;
   if (t === 'generale' && righe.some(r => D[r[0]].cl1 && D[r[1]].cl1)) h += `<p class="${cls}">Classe 1 sul ponte: gruppi di compatibilità diversi ad almeno 6 m, salvo stivaggio misto ammesso da 7.2.7 (7.6.2.4.3); nelle navi a stiva unica eccezioni per i gruppi B e D (7.6.2.4.4).</p>`;
   return h;
