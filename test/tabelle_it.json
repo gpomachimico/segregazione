@@ -166,5 +166,77 @@
   "Due paratie",
   "Proibito",
   "Proibito"
+ ],
+ "roro 1 CC": [
+  "Nessuna restrizione",
+  "Nessuna restrizione",
+  "Nessuna restrizione",
+  "Nessuna restrizione"
+ ],
+ "roro 1 CO": [
+  "Nessuna restrizione",
+  "Nessuna restrizione",
+  "Nessuna restrizione",
+  "Nessuna restrizione"
+ ],
+ "roro 1 OO": [
+  "Almeno 3 m",
+  "Almeno 3 m",
+  "Almeno 3 m",
+  "Almeno 3 m"
+ ],
+ "roro 2 CC": [
+  "Almeno 6 m",
+  "Almeno 6 m o una paratia",
+  "Almeno 3 m",
+  "Almeno 3 m o una paratia"
+ ],
+ "roro 2 CO": [
+  "Almeno 6 m",
+  "Almeno 6 m o una paratia",
+  "Almeno 3 m",
+  "Almeno 6 m o una paratia"
+ ],
+ "roro 2 OO": [
+  "Almeno 6 m",
+  "Almeno 12 m o una paratia",
+  "Almeno 6 m",
+  "Almeno 12 m o una paratia"
+ ],
+ "roro 3 CC": [
+  "Almeno 12 m",
+  "Almeno 24 m + ponte",
+  "Almeno 12 m",
+  "Almeno 24 m + ponte"
+ ],
+ "roro 3 CO": [
+  "Almeno 24 m",
+  "Almeno 24 m + ponte",
+  "Almeno 24 m",
+  "Almeno 24 m + ponte"
+ ],
+ "roro 3 OO": [
+  "Almeno 36 m",
+  "Due ponti o due paratie",
+  "Proibito",
+  "Proibito"
+ ],
+ "roro 4 CC": [
+  "Almeno 36 m",
+  "Due paratie o almeno 36 m + due ponti",
+  "Proibito",
+  "Proibito"
+ ],
+ "roro 4 CO": [
+  "Almeno 36 m",
+  "Almeno 48 m includendo due paratie",
+  "Proibito",
+  "Proibito"
+ ],
+ "roro 4 OO": [
+  "Almeno 48 m",
+  "Proibito",
+  "Proibito",
+  "Proibito"
  ]
 }

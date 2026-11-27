@@ -82,7 +82,11 @@ const TAB_CNT = {
 const COMBO = { CC: [0, 'closed versus closed'], CO: [1, 'closed versus open'], OO: [2, 'open versus open'] };
 const COMBO_IT = { CC: 'chiuso contro chiuso', CO: 'chiuso contro aperto', OO: 'aperto contro aperto' };
 // traduzione di lavoro delle celle di 7.4.3.2 e 7.4.3.3 (fa fede il testo inglese del Codice)
-const TRAD = [ // testo dell'edizione italiana del Codice, tabelle 7.4.3.2 e 7.4.3.3 (verificate cella per cella il 27/11/2026)
+const TRAD = [ // testo dell'edizione italiana del Codice, tabelle 7.4.3.2, 7.4.3.3 e 7.5.3.2 (verificate cella per cella il 27/11/2026)
+  ['Two bulkheads or at least 36 m + two decks', 'Due paratie o almeno 36 m + due ponti'],
+  ['At least 48 m including two bulkheads', 'Almeno 48 m includendo due paratie'],
+  ['Two decks or two bulkheads', 'Due ponti o due paratie'],
+  [' + deck', ' + ponte'], ['At least ', 'Almeno '],
   ['One on top of the other permitted', 'Permesso uno sopra l\'altro'],
   ['Open on top of closed permitted. Otherwise as for “open versus open”', 'Permesso aperto sopra chiuso, altrimenti come per “aperto contro aperto”'],
   ['Open on top of closed permitted otherwise as for “open versus open”', 'Permesso aperto sopra chiuso, altrimenti come per “aperto contro aperto”'],
@@ -97,7 +101,50 @@ const TRAD = [ // testo dell'edizione italiana del Codice, tabelle 7.4.3.2 e 7.4
   ['One bulkhead', 'Una paratia'], ['Two bulkheads', 'Due paratie'], ['No restriction', 'Nessuna restrizione'], ['Prohibited', 'Proibito']
 ];
 const trad = s => TRAD.reduce((t, [en, it]) => t.split(en).join(it), s);
-const combo = (a, b) => a.aperto && b.aperto ? 'OO' : a.aperto || b.aperto ? 'CO' : 'CC';
+// i colli stivati in modo convenzionale contano come unità aperte fuori dal capitolo 7.6 (scelta prudente dell'app)
+const ap = (d, tipo) => d.aperto || (d.colli && tipo !== 'generale');
+const combo = (a, b, tipo) => ap(a, tipo) && ap(b, tipo) ? 'OO' : ap(a, tipo) || ap(b, tipo) ? 'CO' : 'CC';
+// ---------- 7.5: navi ro-ro (v1.8-beta) ----------
+// 7.5.3.2, testo originale; solo distanze orizzontali. fa/at: [CC sul ponte, CC sotto, CO sul, CO sotto, OO sul, OO sotto]
+const AL = 'At least ';
+const TAB_RORO = {
+  par: '7.5.3.2', nome: 'cargo transport units on board ro-ro ships',
+  1: { fa: [NR, NR, NR, NR, AL + '3 m', AL + '3 m'], at: [NR, NR, NR, NR, AL + '3 m', AL + '3 m'] },
+  2: { fa: [AL + '6 m', AL + '6 m or one bulkhead', AL + '6 m', AL + '6 m or one bulkhead', AL + '6 m', AL + '12 m or one bulkhead'],
+    at: [AL + '3 m', AL + '3 m or one bulkhead', AL + '3 m', AL + '6 m or one bulkhead', AL + '6 m', AL + '12 m or one bulkhead'] },
+  3: { fa: [AL + '12 m', AL + '24 m + deck', AL + '24 m', AL + '24 m + deck', AL + '36 m', 'Two decks or two bulkheads'],
+    at: [AL + '12 m', AL + '24 m + deck', AL + '24 m', AL + '24 m + deck', PR, PR] },
+  4: { fa: [AL + '36 m', 'Two bulkheads or at least 36 m + two decks', AL + '36 m', AL + '48 m including two bulkheads', AL + '48 m', PR],
+    at: [PR, PR, PR, PR, PR, PR] }
+};
+function bordoRoro(lev, cmb) {
+  const T = TAB_RORO[lev], k = COMBO[cmb][0];
+  return { par: '7.5.3.2', faOn: T.fa[2 * k], faUnder: T.fa[2 * k + 1], atOn: T.at[2 * k], atUnder: T.at[2 * k + 1] };
+}
+// ---------- 7.6: navi da carico generale (v1.8-beta) ----------
+// definizioni di 7.6.3.2: testo originale (en) e dell'edizione italiana (it, immagine fornita da Luca il 27/11/2026); sintesi sul ponte / sotto il ponte
+const DEF_GEN = {
+  1: { en: 'Effectively segregated so that the incompatible goods cannot interact dangerously in the event of an accident but may be transported in the same compartment or hold or on deck, provided a minimum horizontal separation of 3 m, projected vertically, is obtained.',
+    it: 'Effettivamente segregato così che le merci incompatibili non possano interagire pericolosamente in caso di incidente ma possono essere trasportate nello stesso compartimento o stiva o sul ponte, a condizione che vi sia almeno una separazione orizzontale di 3 metri, proiettata verticalmente.',
+    on: 'Almeno 3 m in orizzontale, proiettati verticalmente', under: 'Stesso compartimento o stiva ammesso, con almeno 3 m in orizzontale proiettati verticalmente' },
+  2: { en: 'In different compartments or holds when stowed under deck. Provided the intervening deck is resistant to fire and liquid, a vertical separation, i.e. in different compartments, may be accepted as equivalent to this segregation. For on deck stowage, this segregation means a separation by a distance of at least 6 m horizontally.',
+    it: 'In differenti compartimenti o stive quando stivato sotto il ponte. A condizione che il ponte intermedio sia resistente al fuoco e ai liquidi, una separazione verticale, per esempio in differenti compartimenti, può essere accettata come equivalente a questa segregazione. Per lo stivaggio sul ponte, la segregazione significa una separazione mediante una distanza di almeno 6 metri orizzontalmente.',
+    on: 'Almeno 6 m in orizzontale', under: 'In differenti compartimenti o stive; separazione verticale ammessa se il ponte intermedio è resistente al fuoco e ai liquidi' },
+  3: { en: 'Either a vertical or a horizontal separation. If the intervening decks are not resistant to fire and liquid, then only a longitudinal separation, i.e. by an intervening complete compartment or hold, is acceptable. For on deck stowage, this segregation means a separation by a distance of at least 12 m horizontally. The same distance has to be applied if one package is stowed on deck, and the other one in an upper compartment.',
+    it: 'Separazione sia verticale che orizzontale. Se i ponti intermedi non sono resistenti al fuoco e ai liquidi, è accettabile allora soltanto una separazione orizzontale, per esempio mediante un compartimento completo intermedio. Per lo stivaggio sul ponte, la segregazione significa una separazione mediante una distanza di almeno 12 metri orizzontalmente. La stessa distanza deve essere applicata se uno dei colli è stivato sul ponte e un altro in un compartimento sottostante.',
+    on: 'Almeno 12 m in orizzontale; la stessa distanza se un collo è sul ponte e l\'altro in un compartimento sottostante', under: 'Separazione verticale o orizzontale mediante un compartimento completo; se i ponti intermedi non sono resistenti al fuoco e ai liquidi, solo un compartimento completo intermedio' },
+  4: { en: 'Vertical separation alone does not meet this requirement. Between a package under deck and one on deck, a minimum distance of 24 m, including a complete compartment, must be maintained longitudinally. For on deck stowage, this segregation means a separation by a distance of at least 24 m longitudinally.',
+    it: 'La separazione verticale da sola non soddisfa questo requisito. Tra un collo sotto il ponte e uno sul ponte, deve essere mantenuta longitudinalmente una distanza minima di 24 metri, includente un compartimento completo. Per lo stivaggio sul ponte, la segregazione significa una separazione mediante una distanza di almeno 24 metri longitudinalmente.',
+    on: 'Almeno 24 m in senso longitudinale', under: 'Compartimento completo intermedio in senso longitudinale (la sola separazione verticale non basta); fra un collo sotto il ponte e uno sul ponte almeno 24 m longitudinali, compreso un compartimento completo' }
+};
+// livello da applicare fra colli e unità di trasporto su nave da carico generale (7.6.3.2, 7.6.3.3, 7.6.3.4)
+function livelloGen(l, A, B) {
+  const chiusa = d => !d.aperto && !d.colli;
+  if ((A.colli && chiusa(B)) || (B.colli && chiusa(A))) return l === 1 ? { lev: 0, par: '7.6.3.3.2.1' } : l === 2 ? { lev: 1, par: '7.6.3.3.2.2' } : { lev: l, par: '7.6.3.3.2' };
+  if (chiusa(A) && chiusa(B)) return l === 1 ? { lev: 0, par: '7.6.3.4.1.1' } : l === 2 ? { lev: 1, par: '7.6.3.4.1.2' } : { lev: l, par: '7.6.3.4.1' };
+  return { lev: l, par: A.colli && B.colli ? '7.6.3.2' : (A.colli || B.colli) ? '7.6.3.3.1' : '7.6.3.2 (7.6.1.1)' };
+}
+function bordoGen(l, A, B) { const g = livelloGen(l, A, B); return Object.assign(g, g.lev ? { on: DEF_GEN[g.lev].on, under: DEF_GEN[g.lev].under, en: DEF_GEN[g.lev].en } : { on: 'Nessuna segregazione richiesta', under: 'Nessuna segregazione richiesta', en: 'No segregation required' }); }
 function bordo(lev, cmb, tipo = 'chiuse') { // prescrizioni a bordo per un livello e una combinazione
   const T = TAB_CNT[tipo][lev], k = COMBO[cmb][0];
   const v = /^As for/.test(T.v[k]) ? `${T.v[k]} (${T.v[2]})` : T.v[k];
@@ -106,12 +153,18 @@ function bordo(lev, cmb, tipo = 'chiuse') { // prescrizioni a bordo per un livel
 // compatibilità con la versione 1.0: tabella sintetica "closed versus closed" su stive chiuse
 const NAVE = {};
 for (const l of [1, 2, 3, 4]) { const b = bordo(l, 'CC'); NAVE[l] = [b.v, b.faOn, b.faUnder, b.atOn, b.atUnder]; }
+// passeggeri (7.1.3): 'carico' = nave da carico o passeggeri entro i limiti; 'pax' = nave passeggeri oltre i limiti
 
 // 7.1.3 categorie di stivaggio, colonna delle navi da carico (i portacontainer sono navi da carico)
 const CAT_CARGO = {
   '01': 'On deck in closed cargo transport unit or under deck', '02': 'On deck in closed cargo transport unit or under deck',
   '03': 'On deck in closed cargo transport unit or under deck', '04': 'On deck in closed cargo transport unit or under deck in closed cargo transport unit',
   '05': 'On deck only in closed cargo transport unit', A: 'On deck or under deck', B: 'On deck or under deck', C: 'On deck only', D: 'On deck only', E: 'On deck or under deck'
+};
+const CAT_PAX = { // colonna delle navi passeggeri (classe 1: oltre 12 passeggeri; classi 2–9: oltre 25 o 1 ogni 3 m di lunghezza)
+  '01': 'On deck in closed cargo transport unit or under deck', '02': 'On deck in closed cargo transport unit or under deck in closed cargo transport unit in accordance with 7.1.4.4.6',
+  '03': 'Prohibited except if in accordance with 7.1.4.4.6', '04': 'Prohibited except if in accordance with 7.1.4.4.6', '05': 'Prohibited except if in accordance with 7.1.4.4.6',
+  A: 'On deck or under deck', B: 'On deck only', C: 'On deck only', D: 'Prohibited', E: 'Prohibited'
 };
 const SOLO_COPERTA = ['05', 'C', 'D'];
 // infiammabilità ai fini di 7.4.2.3 e 7.4.2.4: sì, no, oppure "cond" (da verificare)
@@ -120,35 +173,73 @@ function inf23(d) {
   if (d.div === '3') return ['I', 'II'].includes(d.pg) ? 'si' : d.pg === 'III' ? 'no' : 'cond';
   return d.sub.includes('3') || d.sub.includes('2.1') ? 'cond' : 'no';
 }
-// prescrizioni di stivaggio su portacontainer per una merce (7.1.3, 3.4.3, 3.5.7, colonna 16a, 7.4.1, 7.4.2)
+// prescrizioni di stivaggio per una merce secondo il tipo di nave (7.1.3, 3.4.3, 3.5.7, colonna 16a, 7.4, 7.5, 7.6)
 function stivaggio(d, nave = {}) {
-  const S = [], add = (txt, par, cond) => S.push({ txt, par, cond });
-  const cat = d.lq || d.eq ? 'A' : ((d.r['16a'] || '').match(/Category\s+(\w+)/) || [])[1];
-  if (d.lq || d.eq) add('stowage category A: ' + CAT_CARGO.A + '; le altre disposizioni della colonna 16a non si applicano', d.lq ? '3.4.3' : '3.5.7.1');
-  else if (cat) add(`stowage category ${cat}: ${CAT_CARGO[cat] || '–'}`, '7.1.3, colonna 16a');
-  const solo = cat && SOLO_COPERTA.includes(cat);
-  if (cat && /^0[1-5]$/.test(cat) && d.aperto) add(`container indicato come aperto: con la categoria ${cat} ${['04', '05'].includes(cat) ? 'serve sempre' : 'in coperta serve'} un'unità di trasporto chiusa per la classe 1 (definizione in 7.1.2)${['04', '05'].includes(cat) ? '' : '; sotto coperta ammesso'}`, '7.1.3.1');
-  if (!(d.lq || d.eq)) for (const c of (d.r['16a'] || '').match(/\b(SW|H)\d+\b/g) || []) add(`${c}: ${(DATA.imdgCod[c.replace(/\d+/, '')] || {})[c] || ''}`, 'colonna 16a');
-  if (nave.tipo === 'senza' && solo) add('stivaggio solo in coperta: non nelle stive senza boccaporti né sulla loro verticale', '7.4.2.1');
-  else if (nave.tipo === 'senza') add('nelle stive senza boccaporti o sulla loro verticale solo se la stiva è conforme a SOLAS II-2/19 (o II-2/54)', '7.4.2.1');
+  const S = [], add = (txt, par, cond) => S.push({ txt, par, cond }), tipo = nave.tipo || 'chiuse', pax = nave.pax === 'pax' && ['roro', 'generale'].includes(tipo);
+  const lim = d.lq || d.eq, cat = lim ? 'A' : ((d.r['16a'] || '').match(/Category\s+(\w+)/) || [])[1];
+  const CAT = pax ? CAT_PAX : CAT_CARGO, col = pax ? 'navi passeggeri oltre il limite di passeggeri' : 'navi da carico';
+  if (lim) add(`stowage category A (${col}): ${CAT.A}; le altre disposizioni della colonna 16a non si applicano`, d.lq ? '3.4.3' : '3.5.7.1');
+  else if (cat) add(`stowage category ${cat} (${col}): ${CAT[cat] || '–'}`, '7.1.3, colonna 16a');
+  const solo = cat && (SOLO_COPERTA.includes(cat) || (pax && cat === 'B'));
+  const apertaQui = d.aperto || (d.colli && tipo !== 'generale');
+  if (cat && /^0[1-5]$/.test(cat) && (apertaQui || d.colli)) add(`${d.colli ? 'colli stivati in modo convenzionale' : 'unità indicata come aperta'}: con la categoria ${cat} ${['04', '05'].includes(cat) ? 'serve sempre' : 'sul ponte serve'} un'unità di trasporto chiusa per la classe 1 (definizione in 7.1.2)${['04', '05'].includes(cat) ? '' : '; sotto il ponte ammesso'}`, '7.1.3.1');
+  if (!lim) for (const c of (d.r['16a'] || '').match(/\b(SW|H)\d+\b/g) || []) add(`${c}: ${(DATA.imdgCod[c.replace(/\d+/, '')] || {})[c] || ''}`, 'colonna 16a');
   const f = inf23(d), cf = f === 'cond' ? 'se gas infiammabile o liquido con punto di infiammabilità inferiore a 23 °C (vaso chiuso)' : null;
-  if (f !== 'no' && !(d.lq || d.eq)) {
-    add('in coperta: almeno 2,4 m in orizzontale, e in proiezione verticale, da qualsiasi potenziale sorgente di accensione', '7.4.2.3.2', cf);
-    add('sotto coperta: non insieme a container a temperatura controllata che non siano di tipo certificato sicuro', '7.4.2.3.3', cf);
-    if (nave.vecchia) add('nave costruita prima delle date di 7.4.2.3.1: solo in coperta, salvo approvazione dell\'Amministrazione', '7.4.2.3.1', cf);
+  const sw = /\bSW[56]\b/.test(d.r['16a'] || ''), vent = d.div === '2.1' || d.div === '4.3' || (['6.1', '8'].includes(d.div) && d.sub.includes('3')) || sw;
+  if (tipo === 'chiuse' || tipo === 'senza') {
+    if (tipo === 'senza' && solo) add('stivaggio solo sul ponte: non nelle stive senza boccaporti né sulla loro verticale', '7.4.2.1');
+    else if (tipo === 'senza') add('nelle stive senza boccaporti o sulla loro verticale solo se la stiva è conforme a SOLAS II-2/19 (o II-2/54)', '7.4.2.1');
+    if (f !== 'no' && !lim) {
+      add('sul ponte: almeno 2,4 m in orizzontale, e in proiezione verticale, da qualsiasi potenziale sorgente di accensione', '7.4.2.3.2', cf);
+      add('sotto il ponte: non insieme a container a temperatura controllata che non siano di tipo certificato sicuro', '7.4.2.3.3', cf);
+      if (nave.vecchia) add('nave costruita prima delle date di 7.4.2.3.1: solo sul ponte, salvo approvazione dell\'Amministrazione', '7.4.2.3.1', cf);
+    }
+    if (nave.vecchia && !solo && !lim && (vent || f !== 'no')) add('nave costruita prima delle date di 7.4.2.4.1: sotto il ponte solo in stiva con ventilazione meccanica, altrimenti solo sul ponte', '7.4.2.4.1', vent ? null : cf);
+    if (['1374', '2216', '3497'].includes(d.u)) add('si applicano anche le disposizioni di 7.6.2.7.2.2', '7.4.1.3');
+    if (['1942', '2067', '2071'].includes(d.u)) add('si applicano anche le disposizioni di 7.6.2.8.4 e 7.6.2.11.1', '7.4.1.4');
   }
-  if (nave.vecchia && !solo && !(d.lq || d.eq)) {
-    const sw = /\bSW[56]\b/.test(d.r['16a'] || '');
-    const v = d.div === '2.1' || d.div === '4.3' || (['6.1', '8'].includes(d.div) && d.sub.includes('3')) || sw;
-    if (v || f !== 'no') add('nave costruita prima delle date di 7.4.2.4.1: sotto coperta solo in stiva con ventilazione meccanica, altrimenti solo in coperta', '7.4.2.4.1', v ? null : cf);
+  if (tipo === 'roro') {
+    if (solo) add('merce da stivare solo sul ponte: non negli spazi ro-ro chiusi; negli spazi ro-ro aperti solo se autorizzato dall\'Amministrazione', '7.5.2.6');
+    if (d.colli) add('colli stivati in modo convenzionale: negli spazi di carico convenzionali della nave ro-ro si applica il capitolo 7.6', '7.5.1.3');
+    if (f !== 'no' && !lim) {
+      add('non in uno spazio ro-ro chiuso o in uno spazio di categoria speciale di una nave passeggeri, salvo spazio conforme a SOLAS II-2/19 (o II-2/54) con almeno 6 ricambi d\'aria all\'ora, oppure ventilazione con almeno 10 ricambi d\'aria all\'ora e impianti elettrici non certificati sicuri isolabili senza togliere i fusibili; altrimenti solo sul ponte', '7.5.2.7', cf);
+      add('sul ponte: almeno 3 m da qualsiasi potenziale sorgente di accensione', '7.5.2.8', cf);
+      add('negli spazi ro-ro chiusi o di categoria speciale: impianti elettrici di refrigerazione o riscaldamento delle unità non in funzione, salvo le condizioni di 7.5.2.10', '7.5.2.10', cf);
+    }
   }
-  if (['1374', '2216', '3497'].includes(d.u)) add('si applicano anche le disposizioni di 7.6.2.7.2.2', '7.4.1.3');
-  if (['1942', '2067', '2071'].includes(d.u)) add('si applicano anche le disposizioni di 7.6.2.8.4 e 7.6.2.11.1', '7.4.1.4');
+  if (tipo === 'generale') {
+    if (!lim && f !== 'no') {
+      if (nave.vecchia) add('nave costruita prima delle date di 7.6.2.2.1: solo sul ponte, salvo approvazione dell\'Amministrazione', '7.6.2.2.1', cf);
+      add('sul ponte: almeno 3 m da qualsiasi potenziale sorgente di accensione', '7.6.2.2.2', cf);
+    }
+    if (nave.vecchia && !solo && !lim && (vent || f !== 'no')) add('nave costruita prima delle date di 7.6.2.3.1: sotto il ponte solo in stiva con ventilazione meccanica e se ammesso dalla DGL, altrimenti solo sul ponte', '7.6.2.3.1', vent ? null : cf);
+    const cl = [d.div, ...d.sub], ad = !d.aperto && !d.colli;
+    if (d.cl1) add('compartimenti, stive e unità chiusi a chiave o assicurati contro l\'accesso non autorizzato; sul ponte, gruppi di compatibilità diversi ad almeno 6 m salvo stivaggio misto ammesso da 7.2.7; nelle navi a stiva unica eccezioni di 7.6.2.4.4', '7.6.2.4');
+    if (d.div === '2.2' || d.div === '2.1' || d.div === '2.3') add('recipienti a pressione verticali stivati in blocco, in gabbia o cassa di legno; sul ponte protetti da fonti di calore', '7.6.2.5');
+    if (d.div === '3' && !ad && !lim && f !== 'no') add('solo sul ponte, salvo che sia in un\'unità di trasporto chiusa', '7.6.2.6.1', (f === 'si' ? '' : 'se il punto di infiammabilità è inferiore a 23 °C (vaso chiuso) e ') + 'se imballata in taniche di plastica (3H1, 3H2), fusti di plastica (1H1, 1H2), recipienti di plastica in fusto di plastica (6HH1, 6HH2) o IBC di plastica (31H1, 31H2)');
+    if (d.div === '3') add('colli sul ponte protetti da fonti di calore', '7.6.2.6.2');
+    if (['4.1', '4.2', '4.3'].includes(d.div)) add('colli sul ponte protetti da fonti di calore', '7.6.2.7.1');
+    if (['1361', '1374', '2216', '3497'].includes(d.u)) add('rilevazioni di temperatura, stivaggio protetto da fonti di calore, stivaggio a doppia fila per i sacchi sciolti (salvo UN 2216), sigillatura dei container', '7.6.2.7.2');
+    if (d.u === '1386') add('ventilazione, stivaggio a doppia fila, rilevazioni di temperatura e, oltre 5 giorni di viaggio, impianto di CO2 o gas inerte secondo il tipo', '7.6.2.7.3');
+    if (d.div === '5.1') add('stiva pulita, senza materiali combustibili non necessari; materiali di rizzaggio non combustibili e minimo pagliolato in legno pulito e asciutto; ispezione dopo lo sbarco', '7.6.2.8');
+    if (['1942', '2067'].includes(d.u)) add('sotto il ponte in spazio pulito che possa essere aperto in emergenza; valutare prima del carico apertura dei boccaporti, acqua e stabilità', '7.6.2.8.4');
+    if (d.div === '5.2' || (d.div === '4.1' && /SELF-REACTIVE/.test(d.nome))) add('colli protetti da fonti di calore; disporre lo stivaggio considerando l\'eventuale getto a mare', '7.6.2.9');
+    if (cl.includes('6.1') || cl.includes('8')) add(`ispezione e pulizia degli spazi dopo lo sbarco${cl.includes('8') ? '; classe 8 da tenere il più possibile asciutta' : ''}`, '7.6.2.10');
+    if (d.u === '2071') add('spazio pulito apribile in emergenza, non a contatto con paratia metallica della sala macchine, ispezioni ogni 4 h se mancano rivelatori di fumo', '7.6.2.11.1');
+  }
   return S;
+}
+// segregazione dagli alimenti su nave da carico generale (7.6.3.1)
+function alimentiGen(d) {
+  const cls = [d.div, ...d.sub];
+  if (d.div === '6.2') return d.colli ? '“separated by a complete compartment or hold from” alimenti stivati in modo convenzionale; “separated from” se merce o alimenti sono in un\'unità di trasporto chiusa (7.6.3.1.3)' : '“separated from” alimenti (7.6.3.1.3)';
+  const vieta = cls.some(c => ['2.3', '6.1', '8'].includes(c)) || (cls.includes('7') && !['2908', '2909', '2910', '2911'].includes(d.u)) || d.sg.includes('SG29') || d.sg.includes('SG50');
+  if (!vieta) return '';
+  return d.colli ? '“separated from” alimenti stivati in modo convenzionale; “away from” se gli alimenti sono in un\'unità di trasporto chiusa (7.6.3.1.2)' : 'in unità chiusa: “away from” alimenti stivati in modo convenzionale; nessuna segregazione da alimenti in un\'altra unità chiusa (7.6.3.1.2)';
 }
 
 function cgDati(it) { // classe, divisione, gruppo di compatibilità, rischi sussidiari della voce del carico
-  const r = DATA.dgl[it.u][it.i || 0], o = it.opz || {};
+  const r = DATA.dgl[it.u][it.i || 0], o = it.opz || {}, unita = o.unita || (o.aperto ? 'aperta' : 'chiusa');
   let cl = r['3'], div = (cl.match(/^\d(\.\d)?/) || [cl])[0];
   if (div === '2') div = o.div2 || '2.2'; if (div === '1') div = '1.1';
   const cg = (cl.match(/^1\.\d([A-S])$/) || [])[1] || null;
@@ -157,7 +248,7 @@ function cgDati(it) { // classe, divisione, gruppo di compatibilità, rischi sus
   const b16 = (r['16b'] || '').split(/\s+/).filter(x => /^SGG?\d+$/.test(x));
   const sgg = [...new Set(b16.filter(x => /^SGG/.test(x)).concat((o.sgg || '').toUpperCase().match(/SGG\d+/g) || []))];
   return { u: it.u, r, cl, div, cg, sub, sg: b16.filter(x => /^SG\d/.test(x)), sgg, nome: r['2'], pg: r['5'], lq: !!it.lq, eq: !!it.eq, o,
-    nos: /N\.O\.S\./.test(r['2']), cl1: /^1/.test(cl), aperto: !!o.aperto };
+    nos: /N\.O\.S\./.test(r['2']), cl1: /^1/.test(cl), unita, aperto: unita === 'aperta', colli: unita === 'colli' };
 }
 const rigaTab = div => { const m = div.match(/^1\.(\d)/); return m ? { 1: '1.1', 2: '1.1', 5: '1.1', 3: '1.3', 6: '1.3', 4: '1.4' }[m[1]] : div; };
 function righeTab(d, altro) { // righe della tabella 7.2.4 da usare per la merce d: [riga, origine]
@@ -252,4 +343,4 @@ function alimenti(d) { // 7.3.4.2
   const tre = !d.sg.includes('SG50') && ((['6.1', '8'].includes(d.div) && gr === 'III') || (d.div === '8' && gr === 'II') || (gr === 'III' && d.sub.some(c => ['6.1', '8'].includes(c))) || d.sg.includes('SG29'));
   return tre ? 'con alimenti solo ad almeno 3 m (7.3.4.2.2)' : 'non nella stessa unità di trasporto con alimenti (7.3.4.2.1)';
 }
-if (typeof module !== 'undefined') module.exports = { trad, COMBO_IT, cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE, TAB_CNT, bordo, combo, stivaggio, inf23 };
+if (typeof module !== 'undefined') module.exports = { TAB_RORO, bordoRoro, DEF_GEN, livelloGen, bordoGen, alimentiGen, CAT_PAX, trad, COMBO_IT, cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE, TAB_CNT, bordo, combo, stivaggio, inf23 };

@@ -38,3 +38,28 @@ for (const t of ['chiuse', 'senza']) for (const l of [1, 2, 3, 4]) for (const c 
   const b = R.bordo(l, c, t); for (const k of ['v', 'faOn', 'faUnder', 'atOn', 'atUnder']) ok(!/\b(container space|bulkhead|deck|hold|vertical|open|closed|Prohibited|restriction|Minimum)\b/i.test(R.trad(b[k])), `traduzione ${t} ${l} ${c} ${k}: ${R.trad(b[k])}`);
 }
 console.log('traduzione: errori', bad);
+// v1.8: navi ro-ro (7.5.3.2) e da carico generale (7.6.3)
+const RR = (l, c, k) => R.bordoRoro(l, c)[k];
+ok(RR(2, 'OO', 'faUnder') === 'At least 12 m or one bulkhead', '7.5.3.2 .2 OO fore and aft under deck');
+ok(RR(2, 'CO', 'atUnder') === 'At least 6 m or one bulkhead', '7.5.3.2 .2 CO athwartships under deck');
+ok(RR(3, 'OO', 'faUnder') === 'Two decks or two bulkheads', '7.5.3.2 .3 OO fore and aft under deck');
+ok(RR(3, 'OO', 'atOn') === 'Prohibited', '7.5.3.2 .3 OO athwartships on deck');
+ok(RR(4, 'CC', 'faUnder') === 'Two bulkheads or at least 36 m + two decks', '7.5.3.2 .4 CC fore and aft under deck');
+ok(RR(4, 'CO', 'faUnder') === 'At least 48 m including two bulkheads', '7.5.3.2 .4 CO fore and aft under deck');
+ok(RR(4, 'OO', 'faUnder') === 'Prohibited', '7.5.3.2 .4 OO fore and aft under deck');
+const G = (l, a, b) => R.livelloGen(l, a, b);
+const colli = { colli: true }, chiusa = {}, aperta = { aperto: true };
+ok(G(1, colli, chiusa).lev === 0 && G(2, colli, chiusa).lev === 1 && G(3, colli, chiusa).lev === 3, '7.6.3.3.2 colli/unità chiusa');
+ok(G(1, chiusa, chiusa).lev === 0 && G(2, chiusa, chiusa).lev === 1 && G(4, chiusa, chiusa).lev === 4, '7.6.3.4.1 unità chiuse');
+ok(G(1, colli, aperta).lev === 1 && G(2, colli, aperta).par === '7.6.3.3.1', '7.6.3.3.1 colli/unità aperta');
+ok(G(2, colli, colli).lev === 2 && G(2, colli, colli).par === '7.6.3.2', '7.6.3.2 colli/colli');
+let m = 0;
+for (const [u, V] of Object.entries(DATA.dgl)) V.forEach((r, i) => {
+  for (const unita of ['chiusa', 'aperta', 'colli']) for (const nave of [{ tipo: 'roro', pax: 'pax', vecchia: true }, { tipo: 'generale' }, { tipo: 'generale', pax: 'pax', vecchia: true }]) {
+    const d = R.cgDati({ u, i, opz: { unita } }), S = R.stivaggio(d, nave); m++;
+    ok(S.every(x => x.txt && !/undefined|NaN/.test(x.txt + x.par + (x.cond || ''))) && !/undefined/.test(R.alimentiGen(d)), `stivaggio 7.5/7.6 UN ${u} voce ${i + 1}`);
+  }
+});
+console.log(m, 'combinazioni di stivaggio 7.5/7.6; errori', bad);
+console.log('UN 1203 colli, generale, nave vecchia:', T('1203', 0, { unita: 'colli' }, { tipo: 'generale', vecchia: true }));
+console.log('UN 0081 ro-ro passeggeri:', T('0081', 0, {}, { tipo: 'roro', pax: 'pax' }));
