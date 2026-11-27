@@ -21,7 +21,8 @@ sw = codici(ch7[ch7.index('7.1.5       Stowage codes'):ch7.index('7.1.6       Ha
 hh = codici(ch7[ch7.index('7.1.6       Handling codes'):ch7.index('Chapter 7.2\n')], 'H')
 sgg = {}
 for m in re.finditer(r'^\s*(SGG\d+)\s+\d+\s+(.+)$', ch7[ch7.index('7.2.5.2'):ch7.index('7.2.5.3')], re.M): sgg[m.group(1)] = m.group(2).strip()
-sgg['SGG7'] += ' compounds)'   # riga a capo nel PDF: "heavy metals and their salts (including their organometallic / compounds)"
+sgg['SGG7'] += ' compounds)'
+sg['SG78'] = re.sub(r'\s*Annex\s*$', '', sg['SG78'])   # residuo dell'impaginazione del PDF (27/11/2026)   # riga a capo nel PDF: "heavy metals and their salts (including their organometallic / compounds)"
 i8 = ch7.index('7.2.8       Segregation codes'); sg = codici(ch7[i8:ch7.index('Segregation flow chart')], 'SG')
 # tabella di segregazione 7.2.4
 COLS = ['1.1', '1.3', '1.4', '2.1', '2.2', '2.3', '3', '4.1', '4.2', '4.3', '5.1', '5.2', '6.1', '6.2', '7', '8', '9']

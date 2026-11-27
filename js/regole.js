@@ -383,7 +383,10 @@ function coppia(A, B) { // ritorna { lev, motivi: [{lev, txt, cond, der}], note:
     }
   } else {
     // tabella 7.2.4 con le righe di ciascuna merce
-    for (const [ra, oa, sa, pa] of righeTab(A, B)) for (const [rb, ob, sb, pb] of righeTab(B, A)) {
+    // SG77: come per la classe 8, ma nessuna segregazione rispetto alla classe 7 (7.2.8)
+    const sg77 = (A.sg.includes('SG77') && B.div === '7') || (B.sg.includes('SG77') && A.div === '7');
+    if (sg77) add(0, `${A.sg.includes('SG77') ? 'UN ' + A.u : 'UN ' + B.u}, SG77: nessuna segregazione rispetto alla classe 7`);
+    if (!sg77) for (const [ra, oa, sa, pa] of righeTab(A, B)) for (const [rb, ob, sb, pb] of righeTab(B, A)) {
       const v = DATA.imdgCod.SEGR[ra] && DATA.imdgCod.SEGR[ra][rb];
       if (/^[1-4]$/.test(v)) { add(+v, `tabella 7.2.4: ${oa} con ${ob}`, null, (sa || sb || /^SG/.test(oa + ob)) && A.div === B.div); if (pa || pb) M[M.length - 1].opz = true; }
       else if (v === 'X') add(0, `tabella 7.2.4: ${oa} con ${ob}: X, nessuna prescrizione generale`);
@@ -457,6 +460,9 @@ const DEF_BULK = {
     on: '–', under: 'Compartimento completo intermedio in senso longitudinale; la separazione verticale da sola non soddisfa questo requisito' }
 };
 const lab = d => d.mhb ? 'MHB' : 'UN ' + d.u;
+// schede EmS (colonna 15); "*" rinvia alla nota della voce nella DGL (verificata sul testo del Codice, 27/11/2026)
+const EMS_NOTA = { '3166': 'F-D, S-U for gases or F-E, S-E for liquids', '3542': 'F-G, S-M for pyrophoric substances, F-A, S-J for self-heating substances' };
+const ems = d => { if (d.mhb) return ''; const e = (d.r['15'] || '').trim(); return !e || e === '–' ? '' : e === '*' ? (EMS_NOTA[d.u] || '*') : e; };
 // coppia del carico: con una rinfusa vale 7.6.3.5.2, fra due rinfuse il Codice IMSBC, altrimenti il capitolo 7.2
 function coppiaCarico(A, B) {
   for (const X of [A, B]) { const ns = nonSoggetta(X) || (vietata(X) ? 'vietata' : null);
@@ -494,4 +500,4 @@ function alimenti(d) { // 7.3.4.2
   const tre = !d.sg.includes('SG50') && ((['6.1', '8'].includes(d.div) && gr === 'III') || (d.div === '8' && gr === 'II') || (gr === 'III' && d.sub.some(c => ['6.1', '8'].includes(c))) || d.sg.includes('SG29'));
   return tre ? 'con alimenti solo ad almeno 3 m (7.3.4.2.2)' : 'non nella stessa unità di trasporto con alimenti (7.3.4.2.1)';
 }
-if (typeof module !== 'undefined') module.exports = { vietata, nonSoggetta, lqAmmessa, eqAmmessa, modiOfferti, MODI, verificaModalita, haImballaggio, haCisterna, bkAmmessi, rinfusaStivaAmmessa, coppiaCarico, TAB_BULK, BULK_COL, DEF_BULK, bordoBulk, lab, TAB_RORO, bordoRoro, DEF_GEN, livelloGen, bordoGen, alimentiGen, CAT_PAX, trad, COMBO_IT, cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE, TAB_CNT, bordo, combo, stivaggio, inf23 };
+if (typeof module !== 'undefined') module.exports = { ems, SG_COME, SG_CLASSE, SG_GRUPPO, SG_NOME, ESENTI, ESENTI4, vietata, nonSoggetta, lqAmmessa, eqAmmessa, modiOfferti, MODI, verificaModalita, haImballaggio, haCisterna, bkAmmessi, rinfusaStivaAmmessa, coppiaCarico, TAB_BULK, BULK_COL, DEF_BULK, bordoBulk, lab, TAB_RORO, bordoRoro, DEF_GEN, livelloGen, bordoGen, alimentiGen, CAT_PAX, trad, COMBO_IT, cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE, TAB_CNT, bordo, combo, stivaggio, inf23 };
