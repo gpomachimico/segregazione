@@ -83,3 +83,16 @@ for (let k = 0; k < U.length; k++) {
   }
 }
 console.log(nb, 'coppie con rinfuse; errori', bad);
+// v1.10: rinfusa solo per i solidi; bulk container come unità di trasporto
+let liq = 0, nbk = 0;
+for (const [u, V] of Object.entries(DATA.dgl)) V.forEach((r, i) => {
+  if (/^[23]/.test(r['3']) && (R.rinfusaStivaAmmessa(u, r) || R.bkAmmessi(u, r).length)) liq++;
+  for (const k of R.bkAmmessi(u, r)) for (const tipo of ['chiuse', 'generale', 'roro']) {
+    const d = R.cgDati({ u, i, opz: { unita: k.toLowerCase() } }), S = R.stivaggio(d, { tipo }); nbk++;
+    ok(d.bk === k && S.every(x => x.txt && !/undefined|NaN/.test(x.txt + x.par)), `bulk container UN ${u} ${k}`);
+    ok(!R.coppiaCarico(d, R.cgDati({ u: '1203', i: 0 })).rinfusa, `bulk container UN ${u}: segregazione come unità di trasporto`);
+  }
+});
+ok(liq === 0, 'nessuna voce di classe 2 o 3 ammessa alla rinfusa');
+ok(R.cgDati({ u: '3077', i: 0, opz: { unita: 'bk1' } }).aperto === true && R.cgDati({ u: '1408', i: 0, opz: { unita: 'bk2' } }).aperto === false, 'BK1 aperto, BK2 chiuso');
+console.log(nbk, 'casi di bulk container; errori', bad);

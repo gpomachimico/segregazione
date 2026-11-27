@@ -56,6 +56,7 @@ with sync_playwright() as p:
     pg.locator('#cgLista select[data-k=unita]').nth(0).select_option('rinfusa'); pg.wait_for_timeout(200)
     pg.locator('#cgLista select[data-k=unita]').nth(2).select_option('rinfusa'); pg.wait_for_timeout(200)
     pg.click('details.mhb summary'); pg.fill('#cgMhb', 'COAL'); pg.click('#cgMhbAdd'); pg.wait_for_timeout(200)
+    print('opzioni 1203 senza rinfusa', pg.locator('#cgLista select[data-k=unita]').nth(1).locator('option[value=rinfusa], option[value=bk2]').count() == 0, 'opzione BK2 per 1942', pg.locator('#cgLista select[data-k=unita]').nth(0).locator('option[value=bk2]').count() == 1)
     txt = pg.text_content('#cgRis'); print('rinfuse', pg.locator('.cgv').count() == 4, '7.6.3.5.2' in txt, 'IMSBC' in txt, pg.locator('td.n:has-text("R")').count())
     if pg.locator('#btnCoppie').get_attribute('aria-pressed') != 'true': pg.click('#btnCoppie'); pg.wait_for_timeout(150)
     pg.locator('h3:has-text("Matrice")').evaluate('e=>e.scrollIntoView()'); pg.screenshot(path='/tmp/bulk.png')

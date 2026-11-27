@@ -175,7 +175,24 @@ function inf23(d) {
 }
 // prescrizioni di stivaggio per una merce secondo il tipo di nave (7.1.3, 3.4.3, 3.5.7, colonna 16a, 7.4, 7.5, 7.6)
 function stivaggio(d, nave = {}) {
-  if (d.rinfusa) return [{ txt: 'materiale alla rinfusa: stivaggio secondo il Codice IMSBC (scheda della merce); categoria e codici della colonna 16a riguardano le merci imballate', par: '7.6.3.5.1' }];
+  if (d.rinfusa) return [{ txt: 'solido alla rinfusa sciolto in stiva: stivaggio secondo il Codice IMSBC (scheda della merce); categoria e codici della colonna 16a riguardano le merci imballate', par: '7.6.3.5.1' }];
+  const BKX = [];
+  if (d.bk) {
+    const ok = d.bkAmmessi.includes(d.bk), t = nave.tipo || 'chiuse';
+    BKX.push({ txt: `bulk container ${d.bk} (${{ BK1: 'telonato', BK2: 'chiuso', BK3: 'flessibile' }[d.bk]}): ${ok ? 'ammesso dalla colonna 13' : 'non ammesso dalla colonna 13 della DGL per questa voce: serve l\'approvazione provvisoria dell\'autorità competente (4.3.1.3)' + (d.bk === 'BK1' ? '; BK1 in mare solo per UN 3077 (4.3.3.1)' : '')}; solido a contatto diretto con il contenitore, senza imballaggi; non ammessi i solidi che possono liquefarsi durante il trasporto`, par: '4.3.1' });
+    if (d.bk === 'BK1') BKX.push({ txt: 'BK1 solo per UN 3077 che non soddisfa i criteri di 2.9.3 (inquinante marino), alle condizioni di 4.3.3', par: '4.3.3' });
+    if (['4.2', '4.3'].includes(d.div) && d.bk !== 'BK2') BKX.push({ txt: `classe ${d.div}: solo bulk container chiusi (BK2)`, par: d.div === '4.2' ? '4.3.2.1' : '4.3.2.2' });
+    if (d.div === '4.2') BKX.push({ txt: 'massa totale tale che la temperatura di accensione spontanea sia superiore a 55 °C', par: '4.3.2.1' });
+    if (d.div === '4.3') BKX.push({ txt: 'bulk container impermeabili all\'acqua', par: '4.3.2.2' });
+    if (d.div === '5.1') BKX.push({ txt: 'bulk container costruiti o adattati in modo che la merce non venga a contatto con legno o altri materiali incompatibili', par: '4.3.2.3' });
+    if (d.div === '6.2') BKX.push({ txt: 'classe 6.2 in bulk container chiusi alle condizioni di 4.3.2.4', par: '4.3.2.4' });
+    BKX.push({ txt: 'nello stesso bulk container non mescolare sostanze che possono reagire pericolosamente fra loro', par: '4.3.1.14' });
+    if (d.bk === 'BK3') {
+      BKX.push({ txt: 'BK3 non ammesso nelle unità di trasporto', par: '7.3.3.18' });
+      if (t !== 'generale') BKX.push({ txt: 'BK3: stivaggio previsto nelle stive delle navi da carico generale (7.6.2.12); su questo tipo di nave l\'app lo tratta come unità aperta', par: '7.6.2.12' });
+      BKX.push({ txt: 'non sul ponte; senza spazi vuoti fra i contenitori in stiva (o misure contro lo spostamento); al massimo tre strati; dispositivi di sfiato liberi', par: '7.6.2.12' });
+    }
+  }
   const S = [], add = (txt, par, cond) => S.push({ txt, par, cond }), tipo = nave.tipo || 'chiuse', pax = nave.pax === 'pax' && ['roro', 'generale'].includes(tipo);
   const lim = d.lq || d.eq, cat = lim ? 'A' : ((d.r['16a'] || '').match(/Category\s+(\w+)/) || [])[1];
   const CAT = pax ? CAT_PAX : CAT_CARGO, col = pax ? 'navi passeggeri oltre il limite di passeggeri' : 'navi da carico';
@@ -228,7 +245,7 @@ function stivaggio(d, nave = {}) {
     if (cl.includes('6.1') || cl.includes('8')) add(`ispezione e pulizia degli spazi dopo lo sbarco${cl.includes('8') ? '; classe 8 da tenere il più possibile asciutta' : ''}`, '7.6.2.10');
     if (d.u === '2071') add('spazio pulito apribile in emergenza, non a contatto con paratia metallica della sala macchine, ispezioni ogni 4 h se mancano rivelatori di fumo', '7.6.2.11.1');
   }
-  return S;
+  return BKX.concat(S);
 }
 // segregazione dagli alimenti su nave da carico generale (7.6.3.1)
 function alimentiGen(d) {
@@ -239,6 +256,10 @@ function alimentiGen(d) {
   return d.colli ? '“separated from” alimenti stivati in modo convenzionale; “away from” se gli alimenti sono in un\'unità di trasporto chiusa (7.6.3.1.2)' : 'in unità chiusa: “away from” alimenti stivati in modo convenzionale; nessuna segregazione da alimenti in un\'altra unità chiusa (7.6.3.1.2)';
 }
 
+// bulk container ammessi dalla colonna 13 (4.3.1.1–4.3.1.2); BK1 in mare solo per UN 3077 (4.3.3.1)
+function bkAmmessi(u, r) { return ((r['13'] || '').match(/BK[123]/g) || []).filter(k => k !== 'BK1' || u === '3077'); }
+// rinfusa solida sciolta in stiva (7.6.3.5): solo solidi con codice BK nella colonna 13, oppure LSA-I e SCO-I (UN 2912, 2913) della classe 7
+const rinfusaStivaAmmessa = (u, r) => /BK[123]/.test(r['13'] || '') || ['2912', '2913'].includes(u);
 function cgDati(it) { // classe, divisione, gruppo di compatibilità, rischi sussidiari della voce del carico
   if (it.mhb) { const nome = it.nome || 'materiale pericoloso solo alla rinfusa';
     return { u: 'MHB', r: { 2: nome, 3: 'MHB', 4: '', 5: '', '16a': '', '16b': '' }, cl: 'MHB', div: 'MHB', cg: null, sub: [], sg: [], sgg: [], nome, pg: '', lq: false, eq: false, o: {},
@@ -251,8 +272,10 @@ function cgDati(it) { // classe, divisione, gruppo di compatibilità, rischi sus
   if (/See/.test(r['4'] || '') && o.sub) sub = sub.concat(o.sub.split(/[\/\s,;]+/).filter(x => /^\d(\.\d)?$/.test(x)));
   const b16 = (r['16b'] || '').split(/\s+/).filter(x => /^SGG?\d+$/.test(x));
   const sgg = [...new Set(b16.filter(x => /^SGG/.test(x)).concat((o.sgg || '').toUpperCase().match(/SGG\d+/g) || []))];
-  return { u: it.u, r, cl, div, cg, sub, sg: b16.filter(x => /^SG\d/.test(x)), sgg, nome: r['2'], pg: r['5'], lq: !!it.lq && unita !== 'rinfusa', eq: !!it.eq && unita !== 'rinfusa', o,
-    nos: /N\.O\.S\./.test(r['2']), cl1: /^1/.test(cl), unita, aperto: unita === 'aperta', colli: unita === 'colli', rinfusa: unita === 'rinfusa' };
+  return { u: it.u, r, cl, div, cg, sub, sg: b16.filter(x => /^SG\d/.test(x)), sgg, nome: r['2'], pg: r['5'], lq: !!it.lq && !/rinfusa|bk/.test(unita), eq: !!it.eq && !/rinfusa|bk/.test(unita), o,
+    nos: /N\.O\.S\./.test(r['2']), cl1: /^1/.test(cl), unita, bkAmmessi: bkAmmessi(it.u, r),
+    // v1.10: bulk container come unità di trasporto (BK2 chiusa, BK1 telonata = aperta, BK3 flessibile = come colli in stiva)
+    aperto: unita === 'aperta' || unita === 'bk1', colli: unita === 'colli' || unita === 'bk3', rinfusa: unita === 'rinfusa', bk: /^bk[123]$/.test(unita) ? unita.toUpperCase() : null };
 }
 const rigaTab = div => { const m = div.match(/^1\.(\d)/); return m ? { 1: '1.1', 2: '1.1', 5: '1.1', 3: '1.3', 6: '1.3', 4: '1.4' }[m[1]] : div; };
 function righeTab(d, altro) { // righe della tabella 7.2.4 da usare per la merce d: [riga, origine]
@@ -398,4 +421,4 @@ function alimenti(d) { // 7.3.4.2
   const tre = !d.sg.includes('SG50') && ((['6.1', '8'].includes(d.div) && gr === 'III') || (d.div === '8' && gr === 'II') || (gr === 'III' && d.sub.some(c => ['6.1', '8'].includes(c))) || d.sg.includes('SG29'));
   return tre ? 'con alimenti solo ad almeno 3 m (7.3.4.2.2)' : 'non nella stessa unità di trasporto con alimenti (7.3.4.2.1)';
 }
-if (typeof module !== 'undefined') module.exports = { coppiaCarico, TAB_BULK, BULK_COL, DEF_BULK, bordoBulk, lab, TAB_RORO, bordoRoro, DEF_GEN, livelloGen, bordoGen, alimentiGen, CAT_PAX, trad, COMBO_IT, cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE, TAB_CNT, bordo, combo, stivaggio, inf23 };
+if (typeof module !== 'undefined') module.exports = { bkAmmessi, rinfusaStivaAmmessa, coppiaCarico, TAB_BULK, BULK_COL, DEF_BULK, bordoBulk, lab, TAB_RORO, bordoRoro, DEF_GEN, livelloGen, bordoGen, alimentiGen, CAT_PAX, trad, COMBO_IT, cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE, TAB_CNT, bordo, combo, stivaggio, inf23 };

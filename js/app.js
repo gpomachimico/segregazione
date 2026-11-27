@@ -1,6 +1,6 @@
 /* Verifica di segregazione del carico – interfaccia, impostazioni, report stampabile, uso offline */
 'use strict';
-const VERSIONE = '1.9-beta';
+const VERSIONE = '1.10-beta';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -56,7 +56,7 @@ function cgVoceHTML(it, n) {
   const R = DATA.dgl[it.u], d = cgDati(it), o = it.opz || {};
   let h = `<div class="cgv"><div><b>${n}. UN ${esc(it.u)}</b> – ${esc(d.nome.length > 90 ? d.nome.slice(0, 90) + '…' : d.nome)} <span class="small">(classe ${esc(d.cl)}${d.sub.length ? ', sussidiari ' + esc(d.sub.join('/')) : ''}${d.pg && d.pg !== '–' ? ', GI ' + esc(d.pg) : ''}${d.r['16b'] && d.r['16b'] !== '–' ? ', 16b ' + esc(d.r['16b']) : ''})</span></div><div class="row">`;
   if (R.length > 1) h += `<select data-k="i" data-n="${n - 1}">${R.map((r, j) => `<option value="${j}"${j === (it.i || 0) ? ' selected' : ''}>voce ${j + 1}: ${esc(r['2'].slice(0, 60))}${r['5'] && r['5'] !== '–' ? ' – GI ' + esc(r['5']) : ''}</option>`).join('')}</select>`;
-  h += `${d.rinfusa ? '' : `<label class="ck"><input type="checkbox" data-k="lq" data-n="${n - 1}"${it.lq ? ' checked' : ''}> quantità limitate</label><label class="ck"><input type="checkbox" data-k="eq" data-n="${n - 1}"${it.eq ? ' checked' : ''}> quantità esenti</label>`}<select data-k="unita" data-n="${n - 1}" aria-label="Unità di trasporto">${Object.entries(UNITA).filter(([k]) => !['colli', 'rinfusa'].includes(k) || nave.tipo === 'generale' || d.unita === k).map(([k, v]) => `<option value="${k}"${k === d.unita ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
+  h += `${d.rinfusa || d.bk ? '' : `<label class="ck"><input type="checkbox" data-k="lq" data-n="${n - 1}"${it.lq ? ' checked' : ''}> quantità limitate</label><label class="ck"><input type="checkbox" data-k="eq" data-n="${n - 1}"${it.eq ? ' checked' : ''}> quantità esenti</label>`}<select data-k="unita" data-n="${n - 1}" aria-label="Unità di trasporto">${unitaAmmesse(d, it.u).map(k => [k, UNITA[k]]).map(([k, v]) => `<option value="${k}"${k === d.unita ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
   if (d.r['3'] === '2') h += `<select data-k="div2" data-n="${n - 1}">${['2.1', '2.2', '2.3'].map(x => `<option${x === (o.div2 || '2.2') ? ' selected' : ''}>${x}</option>`).join('')}</select>`;
   if (d.sg.includes('SG69')) h += `<label class="ck"><input type="checkbox" data-k="aer1L" data-n="${n - 1}"${o.aer1L !== false ? ' checked' : ''}> capacità fino a 1 L</label>`;
   if (d.sg.includes('SG68')) h += `<label class="ck"><input type="checkbox" data-k="pf60" data-n="${n - 1}"${o.pf60 ? ' checked' : ''}> punto di infiammabilità ≤ 60 °C</label>`;
@@ -70,8 +70,12 @@ function cgVoceHTML(it, n) {
   if (d.cl === '1' && d.u === '0190') h += '<p class="small">Campioni di esplosivo: divisione e gruppo di compatibilità non indicati nella DGL; si usa la divisione 1.1, la più severa, e nessuna compatibilità con altre merci della classe 1.</p>';
   return h + '</div>';
 }
-const UNITA = { chiusa: 'unità chiusa', aperta: 'unità aperta', colli: 'colli, stivaggio convenzionale', rinfusa: 'materiale alla rinfusa' };
-const UNITA_TXT = { aperta: 'unità aperta', colli: 'colli in stivaggio convenzionale', rinfusa: 'alla rinfusa' };
+const UNITA = { chiusa: 'unità chiusa', aperta: 'unità aperta', colli: 'colli, stivaggio convenzionale', bk2: 'bulk container chiuso (BK2)', bk1: 'bulk container telonato (BK1)', bk3: 'bulk container flessibile (BK3)', rinfusa: 'solido alla rinfusa sciolto in stiva (IMSBC)' };
+const UNITA_TXT = { aperta: 'unità aperta', colli: 'colli in stivaggio convenzionale', bk1: 'bulk container telonato BK1', bk2: 'bulk container chiuso BK2', bk3: 'bulk container flessibile BK3', rinfusa: 'solido alla rinfusa sciolto in stiva' };
+// unità proposte per una voce: bulk container solo se previsti dalla colonna 13; rinfusa sciolta e BK3 solo su nave da carico generale
+const unitaAmmesse = (d, u) => Object.keys(UNITA).filter(k => k === d.unita || ['chiusa', 'aperta'].includes(k) || (k === 'colli' && nave.tipo === 'generale') ||
+  (k === 'bk2' && d.bkAmmessi.includes('BK2')) || (k === 'bk1' && d.bkAmmessi.includes('BK1')) || (k === 'bk3' && d.bkAmmessi.includes('BK3') && nave.tipo === 'generale') ||
+  (k === 'rinfusa' && nave.tipo === 'generale' && rinfusaStivaAmmessa(u, d.r)));
 const cella = p => p.imsbc ? '<td class="n cgl0" title="segregazione fra rinfuse: Codice IMSBC">R</td>' : `<td class="n cgl${p.lev}">${p.lev ? p.lev : '–'}${p.levDer < p.lev ? '<sup>d</sup>' : ''}${p.levCond > p.lev ? '*' : ''}${p.motivi.some(m => m.opz && m.lev === p.lev && p.lev) ? '<sup>u</sup>' : ''}</td>`;
 // prescrizioni a bordo di una coppia secondo il tipo di nave: celle in italiano (it) e testo originale (en)
 function bordoCoppia(A, B, l) {
@@ -184,7 +188,7 @@ function caricoRisHTML(perStampa = false) {
   }
   h += stivaggioHTML(D, perStampa);
   const scelte = D.filter(d => piuSussidiari(d) && d.o.subTab).map(d => 'UN ' + d.u);
-  h += `<p class="${cls}">Ipotesi della verifica: tabella 7.2.4 con la classe principale e, se la DGL indica un solo rischio sussidiario, anche con quello (7.2.3.3); con due o più rischi sussidiari valgono le prescrizioni della colonna 16b (7.2.3.4)${scelte.length ? `; per ${scelte.join(', ')} l'utente ha scelto di applicare la tabella 7.2.4 anche ai rischi sussidiari, oltre quanto previsto da 7.2.3.4` : ''}; i codici “come per la classe” sostituiscono la riga della classe principale (7.2.6.2); nei codici “classe …” della colonna 16b la classe comprende i rischi sussidiari (7.2.2.2); prevale la prescrizione più severa e la colonna 16b prevale sulla tabella (7.2.3.1). A bordo: tabella 7.4.3.2, 7.4.3.3 o 7.5.3.2, oppure definizioni di 7.6.3.2 con 7.6.3.3 e 7.6.3.4, secondo il tipo di nave e l'unità indicata per ogni merce (chiusa, aperta, colli). Rinfuse con rischi chimici: tabella 7.6.3.5.2 con la classe principale e la colonna 16b; fra due rinfuse vale il Codice IMSBC, non calcolato. Non sono riportate le prescrizioni per le chiatte (7.7). Verifica di supporto tecnico: la responsabilità della segregazione resta di chi prepara il carico.</p>`;
+  h += `<p class="${cls}">Ipotesi della verifica: tabella 7.2.4 con la classe principale e, se la DGL indica un solo rischio sussidiario, anche con quello (7.2.3.3); con due o più rischi sussidiari valgono le prescrizioni della colonna 16b (7.2.3.4)${scelte.length ? `; per ${scelte.join(', ')} l'utente ha scelto di applicare la tabella 7.2.4 anche ai rischi sussidiari, oltre quanto previsto da 7.2.3.4` : ''}; i codici “come per la classe” sostituiscono la riga della classe principale (7.2.6.2); nei codici “classe …” della colonna 16b la classe comprende i rischi sussidiari (7.2.2.2); prevale la prescrizione più severa e la colonna 16b prevale sulla tabella (7.2.3.1). A bordo: tabella 7.4.3.2, 7.4.3.3 o 7.5.3.2, oppure definizioni di 7.6.3.2 con 7.6.3.3 e 7.6.3.4, secondo il tipo di nave e l'unità indicata per ogni merce (chiusa, aperta, colli). Solidi in bulk container (BK2 chiuso, BK1 telonato = unità aperta, BK3 flessibile = come colli in stiva): segregazione delle unità di trasporto. Solidi alla rinfusa sciolti in stiva: tabella 7.6.3.5.2 con la classe principale e la colonna 16b; fra due rinfuse vale il Codice IMSBC, non calcolato. Rinfuse liquide non considerate. Non sono riportate le prescrizioni per le chiatte (7.7). Verifica di supporto tecnico: la responsabilità della segregazione resta di chi prepara il carico.</p>`;
   return h;
 }
 function mostraCarico() {
