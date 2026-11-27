@@ -47,7 +47,8 @@ const ESENTI4 = ['1325', '3101', '3102', '3103', '3104', '3105', '3106', '3107',
 const NITRATI = ['1942', '2067', '1451', '2722', '1486', '1477', '1498', '1446', '2464', '1454', '1474', '1507'];
 const ESPL_MINA = ['0081', '0082', '0084', '0241', '0331', '0332']; // esplosivi da mina (EXPLOSIVE, BLASTING), escluso 0083
 const TERMINE = { 0: 'nessuna segregazione', 1: '“away from”', 2: '“separated from”', 3: '“separated by a complete compartment or hold from”', 4: '“separated longitudinally by an intervening complete compartment or hold from”' };
-const TERMINE_IT = { 0: 'nessuna segregazione richiesta', 1: 'a distanza da', 2: 'separato da', 3: 'separato da un compartimento o una stiva completa', 4: 'separato longitudinalmente da un compartimento o una stiva completa intermedia' };
+// termini dell'edizione italiana del Codice (tabelle 7.4.3.2 e 7.4.3.3 fornite da Luca il 27/11/2026)
+const TERMINE_IT = { 0: 'nessuna segregazione richiesta', 1: 'lontano da', 2: 'separato da', 3: 'separato mediante un compartimento completo o una stiva da', 4: 'separato longitudinalmente mediante un compartimento completo intermedio o una stiva da' };
 // ---------- 7.4: portacontainer (v1.1-beta) ----------
 // 7.4.3.2 (stive chiuse) e 7.4.3.3 (senza boccaporti), testo originale. Per ogni livello: verticale [CC, CO, OO];
 // longitudinale (fore and aft) e trasversale (athwartships) [CC in coperta, CC sotto, CO in coperta, CO sotto, OO in coperta, OO sotto].
@@ -79,21 +80,21 @@ const TAB_CNT = {
   }
 };
 const COMBO = { CC: [0, 'closed versus closed'], CO: [1, 'closed versus open'], OO: [2, 'open versus open'] };
-const COMBO_IT = { CC: 'chiuso con chiuso', CO: 'chiuso con aperto', OO: 'aperto con aperto' };
+const COMBO_IT = { CC: 'chiuso contro chiuso', CO: 'chiuso contro aperto', OO: 'aperto contro aperto' };
 // traduzione di lavoro delle celle di 7.4.3.2 e 7.4.3.3 (fa fede il testo inglese del Codice)
-const TRAD = [
-  ['One on top of the other permitted', 'Ammesso uno sopra l\'altro'],
-  ['Open on top of closed permitted. Otherwise as for “open versus open”', 'Ammesso l\'aperto sopra il chiuso; altrimenti come per “aperto con aperto”'],
-  ['Open on top of closed permitted otherwise as for “open versus open”', 'Ammesso l\'aperto sopra il chiuso; altrimenti come per “aperto con aperto”'],
-  ['Not in the same vertical line unless segregated by a deck', 'Non sulla stessa verticale, salvo separazione con un ponte'],
-  ['Not in the same vertical line', 'Non sulla stessa verticale'],
-  ['As for “open versus open”', 'Come per “aperto con aperto”'],
-  ['One bulkhead and minimum horizontal distance of 24 m', 'Una paratia e distanza orizzontale minima di 24 m'],
-  ['Minimum horizontal distance of 24 m', 'Distanza orizzontale minima di 24 m'],
-  [' and not in or above same hold', ' e non nella stessa stiva né sopra di essa'],
+const TRAD = [ // testo dell'edizione italiana del Codice, tabelle 7.4.3.2 e 7.4.3.3 (verificate cella per cella il 27/11/2026)
+  ['One on top of the other permitted', 'Permesso uno sopra l\'altro'],
+  ['Open on top of closed permitted. Otherwise as for “open versus open”', 'Permesso aperto sopra chiuso, altrimenti come per “aperto contro aperto”'],
+  ['Open on top of closed permitted otherwise as for “open versus open”', 'Permesso aperto sopra chiuso, altrimenti come per “aperto contro aperto”'],
+  ['Not in the same vertical line unless segregated by a deck', 'Non nella stessa linea verticale salvo se segregato da un ponte'],
+  ['Not in the same vertical line', 'Non nella stessa linea verticale'],
+  ['As for “open versus open”', 'Come per “aperto contro aperto”'],
+  ['One bulkhead and minimum horizontal distance of 24 m', 'Una paratia e distanza minima orizzontale di 24 m'],
+  ['Minimum horizontal distance of 24 m', 'Distanza minima orizzontale di 24 m'],
+  [' and not in or above same hold', ' e non nella o sopra la stessa stiva'],
   [' or one bulkhead', ' o una paratia'],
   ['One container space', 'Uno spazio container'], ['Two container spaces', 'Due spazi container'], ['Three container spaces', 'Tre spazi container'],
-  ['One bulkhead', 'Una paratia'], ['Two bulkheads', 'Due paratie'], ['No restriction', 'Nessuna restrizione'], ['Prohibited', 'Vietato']
+  ['One bulkhead', 'Una paratia'], ['Two bulkheads', 'Due paratie'], ['No restriction', 'Nessuna restrizione'], ['Prohibited', 'Proibito']
 ];
 const trad = s => TRAD.reduce((t, [en, it]) => t.split(en).join(it), s);
 const combo = (a, b) => a.aperto && b.aperto ? 'OO' : a.aperto || b.aperto ? 'CO' : 'CC';

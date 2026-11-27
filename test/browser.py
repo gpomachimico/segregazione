@@ -20,7 +20,7 @@ with sync_playwright() as p:
     pg.click('#btnCoppie'); pg.wait_for_timeout(200); print('dettaglio visibile', pg.locator('#cgRis details summary:has-text("UN 1017 /")').count() > 0)
     pg.click('#cgPrint'); print('report con dettaglio', 'Dettaglio per coppia' in pg.text_content('#report'))
     pg.click('#btnBordo'); pg.wait_for_timeout(200)
-    print('bordo CC/CO', pg.locator('table.bordo tr').count(), 'chiuso con aperto' in pg.inner_text('#cgRis'))
+    print('bordo CC/CO', pg.locator('table.bordo tr').count(), 'chiuso contro aperto' in pg.inner_text('#cgRis'))
     pg.click('#cgPrint'); print('report con tabella', pg.locator('#report table.bordo').count() == 1)
     pg.click('#btnBordo'); pg.wait_for_timeout(200); pg.click('#cgPrint'); print('report senza tabella', pg.locator('#report table.bordo').count() == 0)
     pg.click('#btnBordo'); pg.wait_for_timeout(200)

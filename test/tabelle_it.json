@@ -1,0 +1,170 @@
+{
+ "chiuse 1 CC": [
+  "Permesso uno sopra l'altro",
+  "Nessuna restrizione",
+  "Nessuna restrizione",
+  "Nessuna restrizione",
+  "Nessuna restrizione"
+ ],
+ "chiuse 1 CO": [
+  "Permesso aperto sopra chiuso, altrimenti come per “aperto contro aperto”",
+  "Nessuna restrizione",
+  "Nessuna restrizione",
+  "Nessuna restrizione",
+  "Nessuna restrizione"
+ ],
+ "chiuse 1 OO": [
+  "Non nella stessa linea verticale salvo se segregato da un ponte",
+  "Uno spazio container",
+  "Uno spazio container o una paratia",
+  "Uno spazio container",
+  "Uno spazio container"
+ ],
+ "chiuse 2 CC": [
+  "Non nella stessa linea verticale salvo se segregato da un ponte",
+  "Uno spazio container",
+  "Uno spazio container o una paratia",
+  "Uno spazio container",
+  "Uno spazio container"
+ ],
+ "chiuse 2 CO": [
+  "Come per “aperto contro aperto” (Non nella stessa linea verticale salvo se segregato da un ponte)",
+  "Uno spazio container",
+  "Uno spazio container o una paratia",
+  "Uno spazio container",
+  "Due spazi container"
+ ],
+ "chiuse 2 OO": [
+  "Non nella stessa linea verticale salvo se segregato da un ponte",
+  "Uno spazio container",
+  "Una paratia",
+  "Due spazi container",
+  "Una paratia"
+ ],
+ "chiuse 3 CC": [
+  "Non nella stessa linea verticale salvo se segregato da un ponte",
+  "Uno spazio container",
+  "Una paratia",
+  "Due spazi container",
+  "Una paratia"
+ ],
+ "chiuse 3 CO": [
+  "Come per “aperto contro aperto” (Non nella stessa linea verticale salvo se segregato da un ponte)",
+  "Uno spazio container",
+  "Una paratia",
+  "Due spazi container",
+  "Una paratia"
+ ],
+ "chiuse 3 OO": [
+  "Non nella stessa linea verticale salvo se segregato da un ponte",
+  "Due spazi container",
+  "Due paratie",
+  "Tre spazi container",
+  "Due paratie"
+ ],
+ "chiuse 4 CC": [
+  "Proibito",
+  "Distanza minima orizzontale di 24 m",
+  "Una paratia e distanza minima orizzontale di 24 m*",
+  "Proibito",
+  "Proibito"
+ ],
+ "chiuse 4 CO": [
+  "Proibito",
+  "Distanza minima orizzontale di 24 m",
+  "Due paratie",
+  "Proibito",
+  "Proibito"
+ ],
+ "chiuse 4 OO": [
+  "Proibito",
+  "Distanza minima orizzontale di 24 m",
+  "Due paratie",
+  "Proibito",
+  "Proibito"
+ ],
+ "senza 1 CC": [
+  "Permesso uno sopra l'altro",
+  "Nessuna restrizione",
+  "Nessuna restrizione",
+  "Nessuna restrizione",
+  "Nessuna restrizione"
+ ],
+ "senza 1 CO": [
+  "Permesso aperto sopra chiuso, altrimenti come per “aperto contro aperto”",
+  "Nessuna restrizione",
+  "Nessuna restrizione",
+  "Nessuna restrizione",
+  "Nessuna restrizione"
+ ],
+ "senza 1 OO": [
+  "Non nella stessa linea verticale",
+  "Uno spazio container",
+  "Uno spazio container o una paratia",
+  "Uno spazio container",
+  "Uno spazio container"
+ ],
+ "senza 2 CC": [
+  "Non nella stessa linea verticale",
+  "Uno spazio container",
+  "Uno spazio container o una paratia",
+  "Uno spazio container",
+  "Uno spazio container"
+ ],
+ "senza 2 CO": [
+  "Come per “aperto contro aperto” (Non nella stessa linea verticale)",
+  "Uno spazio container",
+  "Uno spazio container o una paratia",
+  "Due spazi container",
+  "Due spazi container"
+ ],
+ "senza 2 OO": [
+  "Non nella stessa linea verticale",
+  "Uno spazio container e non nella o sopra la stessa stiva",
+  "Una paratia",
+  "Due spazi container e non nella o sopra la stessa stiva",
+  "Una paratia"
+ ],
+ "senza 3 CC": [
+  "Non nella stessa linea verticale",
+  "Uno spazio container e non nella o sopra la stessa stiva",
+  "Una paratia",
+  "Due spazi container e non nella o sopra la stessa stiva",
+  "Una paratia"
+ ],
+ "senza 3 CO": [
+  "Come per “aperto contro aperto” (Non nella stessa linea verticale)",
+  "Uno spazio container e non nella o sopra la stessa stiva",
+  "Una paratia",
+  "Due spazi container e non nella o sopra la stessa stiva",
+  "Una paratia"
+ ],
+ "senza 3 OO": [
+  "Non nella stessa linea verticale",
+  "Due spazi container e non nella o sopra la stessa stiva",
+  "Due paratie",
+  "Tre spazi container e non nella o sopra la stessa stiva",
+  "Due paratie"
+ ],
+ "senza 4 CC": [
+  "Proibito",
+  "Distanza minima orizzontale di 24 m e non nella o sopra la stessa stiva",
+  "Una paratia e distanza minima orizzontale di 24 m*",
+  "Proibito",
+  "Proibito"
+ ],
+ "senza 4 CO": [
+  "Proibito",
+  "Distanza minima orizzontale di 24 m e non nella o sopra la stessa stiva",
+  "Due paratie",
+  "Proibito",
+  "Proibito"
+ ],
+ "senza 4 OO": [
+  "Proibito",
+  "Distanza minima orizzontale di 24 m e non nella o sopra la stessa stiva",
+  "Due paratie",
+  "Proibito",
+  "Proibito"
+ ]
+}
