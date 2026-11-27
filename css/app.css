@@ -58,6 +58,7 @@ td.cgl1{background:#fff4c2}td.cgl2{background:#ffd9a8}td.cgl3{background:#ffb3a0
 .piede{text-align:center;margin:4px 8px 24px}
 ul.leg{list-style:none;padding-left:0;margin:6px 0}ul.leg li{margin:2px 0}
 ul.segnalate{padding-left:18px;font-size:14px}ul.segnalate>li{margin:6px 0}ul.segnalate ul{padding-left:16px;margin:2px 0}
+details.mhb{margin:8px 0}details.mhb .row{gap:6px;align-items:center}details.mhb input{flex:1}
 #report{display:none}
 @media print{
   html,body{background:#fff!important}

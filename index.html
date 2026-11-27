@@ -17,7 +17,7 @@
   <div class="hrow">
     <div>
       <h1>Verifica di segregazione del carico</h1>
-      <p>v1.8-beta · IMDG Code 42-24, capitoli 7.2, 7.4, 7.5 e 7.6 · parere tecnico di supporto, non atto amministrativo<span id="netstato"></span></p>
+      <p>v1.9-beta · IMDG Code 42-24, capitoli 7.2, 7.4, 7.5 e 7.6 · parere tecnico di supporto, non atto amministrativo<span id="netstato"></span></p>
     </div>
     <button id="btnSet" class="icon" type="button" aria-label="Impostazioni">⚙</button>
   </div>
@@ -37,6 +37,9 @@
   <label for="cgU">Numero ONU o nome (in inglese, come nella DGL)</label>
   <input id="cgU" type="search" autocomplete="off" placeholder="es. 1203 oppure ACETONE">
   <div id="cgRes"></div>
+  <details class="mhb"><summary class="small">Materiale pericoloso solo alla rinfusa (MHB, Codice IMSBC)</summary>
+  <div class="row"><input id="cgMhb" type="text" placeholder="nome come nel Codice IMSBC, es. COAL" aria-label="Nome del materiale MHB"><button id="cgMhbAdd" type="button" class="sec mini">Aggiungi MHB</button></div>
+  <p class="small">Le merci della DGL trasportate alla rinfusa si inseriscono col numero ONU, scegliendo “materiale alla rinfusa” come unità (nave da carico generale).</p></details>
   <p class="small" id="cgMsg"></p>
   <div id="cgLista"></div>
   <label for="cgRif">Riferimento del carico (facoltativo, riportato nel report)</label>
@@ -62,7 +65,7 @@
   <button id="cgPrint" type="button">Stampa / salva PDF della verifica</button>
 </section>
 
-<p class="small piede">Dati: Dangerous Goods List e capitolo 7.2 del Codice IMDG, Emendamento 42-24 (Ris. MSC.556(108)), estratti dal testo ufficiale. Coperti: portacontainer (7.4), navi ro-ro (7.5), navi da carico generale (7.6). Non coperti: rinfuse con rischi chimici (7.6.3.5), chiatte (7.7).</p>
+<p class="small piede">Dati: Dangerous Goods List e capitolo 7.2 del Codice IMDG, Emendamento 42-24 (Ris. MSC.556(108)), estratti dal testo ufficiale. Coperti: portacontainer (7.4), navi ro-ro (7.5), navi da carico generale (7.6). Rinfuse con rischi chimici: con merci imballate (7.6.3.5). Non coperti: segregazione fra rinfuse (Codice IMSBC), chiatte (7.7).</p>
 </main>
 <div id="report"></div>
 <script>const DATA = {};</script>

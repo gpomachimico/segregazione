@@ -1,6 +1,6 @@
 # Verifica di segregazione del carico – IMDG 7.2
 
-Web app installabile (PWA), utilizzabile offline, per la verifica della segregazione delle merci pericolose in un carico secondo il Codice IMDG, Emendamento 42-24 (capitoli 3.4, 3.5, 7.1.3, 7.2, 7.3.4, 7.4 portacontainer, 7.5 navi ro-ro e 7.6 navi da carico generale). I risultati sono pareri tecnici di supporto, non atti amministrativi.
+Web app installabile (PWA), utilizzabile offline, per la verifica della segregazione delle merci pericolose in un carico secondo il Codice IMDG, Emendamento 42-24 (capitoli 3.4, 3.5, 7.1.3, 7.2, 7.3.4, 7.4 portacontainer, 7.5 navi ro-ro, 7.6 navi da carico generale e rinfuse con rischi chimici 7.6.3.5). I risultati sono pareri tecnici di supporto, non atti amministrativi.
 
 Indirizzo: https://gpomachimico.github.io/segregazione/
 

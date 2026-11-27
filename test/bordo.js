@@ -63,3 +63,23 @@ for (const [u, V] of Object.entries(DATA.dgl)) V.forEach((r, i) => {
 console.log(m, 'combinazioni di stivaggio 7.5/7.6; errori', bad);
 console.log('UN 1203 colli, generale, nave vecchia:', T('1203', 0, { unita: 'colli' }, { tipo: 'generale', vecchia: true }));
 console.log('UN 0081 ro-ro passeggeri:', T('0081', 0, {}, { tipo: 'roro', pax: 'pax' }));
+// v1.9: rinfuse con rischi chimici (7.6.3.5.2), trascrizione dell'immagine dell'edizione italiana (27/11/2026)
+const IT_BULK = {
+  '4.1': '4 3 2 2 2 2 X 1 X 1 2 X 3 2 1 X', '4.2': '4 3 2 2 2 2 1 X 1 2 2 1 3 2 1 X', '4.3': '4 4 2 2 X 2 X 1 X 2 2 X 2 2 1 X',
+  '5.1': '4 4 2 2 X 2 1 2 2 X 2 1 3 1 2 X', '6.1': '2 2 X X X X X 1 X 1 1 X 1 X X X', '7': '2 2 2 2 2 2 2 2 2 1 2 X 3 X 2 X',
+  '8': '4 2 2 1 X 1 1 1 1 2 2 X 3 2 X X', '9': 'X X X X X X X X X X X X X X X X', MHB: 'X X X X X X X X X X X X 3 X X X' };
+for (const [k, v] of Object.entries(IT_BULK)) ok(R.TAB_BULK[k] === v && v.split(' ').length === 16, `7.6.3.5.2 riga ${k}`);
+const B1 = (a, b) => R.coppiaCarico(R.cgDati(a), R.cgDati(b));
+ok(B1({ u: '1942', opz: { unita: 'rinfusa' } }, { u: '0081' }).lev === 4, 'rinfusa 5.1 con 1.1D: 4');
+ok(B1({ u: '0336' }, { u: '1408', opz: { unita: 'rinfusa' } }).lev === 2, '1.4 imballata con rinfusa 4.3: 2');
+ok(B1({ mhb: true, nome: 'COAL' }, { u: '3373' }).lev === 3, 'MHB con 6.2: 3');
+ok(B1({ u: '1350', opz: { unita: 'rinfusa' } }, { u: '2448', opz: { unita: 'rinfusa' } }).imsbc === true, 'due rinfuse: IMSBC');
+let nb = 0; const U = Object.keys(DATA.dgl);
+for (let k = 0; k < U.length; k++) {
+  const a = { u: U[k], i: 0, opz: { unita: 'rinfusa' } }, b = { u: U[(k * 37 + 11) % U.length], i: 0 }, m = { mhb: true, nome: 'X' };
+  for (const [x, y] of [[a, b], [m, b], [b, m]]) {
+    const p = B1(x, y), q = B1(y, x); nb++;
+    ok(p.lev === q.lev && p.motivi.every(z => !/undefined|NaN/.test(z.txt)), `rinfusa UN ${U[k]} con ${y.u || 'MHB'}`);
+  }
+}
+console.log(nb, 'coppie con rinfuse; errori', bad);

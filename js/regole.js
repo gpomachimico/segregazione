@@ -175,6 +175,7 @@ function inf23(d) {
 }
 // prescrizioni di stivaggio per una merce secondo il tipo di nave (7.1.3, 3.4.3, 3.5.7, colonna 16a, 7.4, 7.5, 7.6)
 function stivaggio(d, nave = {}) {
+  if (d.rinfusa) return [{ txt: 'materiale alla rinfusa: stivaggio secondo il Codice IMSBC (scheda della merce); categoria e codici della colonna 16a riguardano le merci imballate', par: '7.6.3.5.1' }];
   const S = [], add = (txt, par, cond) => S.push({ txt, par, cond }), tipo = nave.tipo || 'chiuse', pax = nave.pax === 'pax' && ['roro', 'generale'].includes(tipo);
   const lim = d.lq || d.eq, cat = lim ? 'A' : ((d.r['16a'] || '').match(/Category\s+(\w+)/) || [])[1];
   const CAT = pax ? CAT_PAX : CAT_CARGO, col = pax ? 'navi passeggeri oltre il limite di passeggeri' : 'navi da carico';
@@ -239,6 +240,9 @@ function alimentiGen(d) {
 }
 
 function cgDati(it) { // classe, divisione, gruppo di compatibilità, rischi sussidiari della voce del carico
+  if (it.mhb) { const nome = it.nome || 'materiale pericoloso solo alla rinfusa';
+    return { u: 'MHB', r: { 2: nome, 3: 'MHB', 4: '', 5: '', '16a': '', '16b': '' }, cl: 'MHB', div: 'MHB', cg: null, sub: [], sg: [], sgg: [], nome, pg: '', lq: false, eq: false, o: {},
+      nos: false, cl1: false, unita: 'rinfusa', aperto: false, colli: false, rinfusa: true, mhb: true }; }
   const r = DATA.dgl[it.u][it.i || 0], o = it.opz || {}, unita = o.unita || (o.aperto ? 'aperta' : 'chiusa');
   let cl = r['3'], div = (cl.match(/^\d(\.\d)?/) || [cl])[0];
   if (div === '2') div = o.div2 || '2.2'; if (div === '1') div = '1.1';
@@ -247,8 +251,8 @@ function cgDati(it) { // classe, divisione, gruppo di compatibilità, rischi sus
   if (/See/.test(r['4'] || '') && o.sub) sub = sub.concat(o.sub.split(/[\/\s,;]+/).filter(x => /^\d(\.\d)?$/.test(x)));
   const b16 = (r['16b'] || '').split(/\s+/).filter(x => /^SGG?\d+$/.test(x));
   const sgg = [...new Set(b16.filter(x => /^SGG/.test(x)).concat((o.sgg || '').toUpperCase().match(/SGG\d+/g) || []))];
-  return { u: it.u, r, cl, div, cg, sub, sg: b16.filter(x => /^SG\d/.test(x)), sgg, nome: r['2'], pg: r['5'], lq: !!it.lq, eq: !!it.eq, o,
-    nos: /N\.O\.S\./.test(r['2']), cl1: /^1/.test(cl), unita, aperto: unita === 'aperta', colli: unita === 'colli' };
+  return { u: it.u, r, cl, div, cg, sub, sg: b16.filter(x => /^SG\d/.test(x)), sgg, nome: r['2'], pg: r['5'], lq: !!it.lq && unita !== 'rinfusa', eq: !!it.eq && unita !== 'rinfusa', o,
+    nos: /N\.O\.S\./.test(r['2']), cl1: /^1/.test(cl), unita, aperto: unita === 'aperta', colli: unita === 'colli', rinfusa: unita === 'rinfusa' };
 }
 const rigaTab = div => { const m = div.match(/^1\.(\d)/); return m ? { 1: '1.1', 2: '1.1', 5: '1.1', 3: '1.3', 6: '1.3', 4: '1.4' }[m[1]] : div; };
 function righeTab(d, altro) { // righe della tabella 7.2.4 da usare per la merce d: [riga, origine]
@@ -336,6 +340,57 @@ function coppia(A, B) { // ritorna { lev, motivi: [{lev, txt, cond, der}], note:
   return { lev, levDer, levCond, motivi: M, note: [...new Set(N)], ctu: lev === 0 && !M.some(m => m.noctu && !m.cond) };
 }
 
+// ---------- 7.6.3.5: rinfuse con rischi chimici e merci imballate (v1.9-beta) ----------
+// tabella 7.6.3.5.2, testo originale verificato riga per riga con l'edizione italiana (immagine fornita da Luca il 27/11/2026)
+// colonne: 1.1/1.2/1.5, 1.3/1.6, 1.4, 2.1, 2.2/2.3, 3, 4.1, 4.2, 4.3, 5.1, 5.2, 6.1, 6.2, 7, 8, 9
+const BULK_COL = ['1.1 1.2 1.5', '1.3 1.6', '1.4', '2.1', '2.2 2.3', '3', '4.1', '4.2', '4.3', '5.1', '5.2', '6.1', '6.2', '7', '8', '9'];
+const TAB_BULK = {
+  '4.1': '4 3 2 2 2 2 X 1 X 1 2 X 3 2 1 X', '4.2': '4 3 2 2 2 2 1 X 1 2 2 1 3 2 1 X', '4.3': '4 4 2 2 X 2 X 1 X 2 2 X 2 2 1 X',
+  '5.1': '4 4 2 2 X 2 1 2 2 X 2 1 3 1 2 X', '6.1': '2 2 X X X X X 1 X 1 1 X 1 X X X', '7': '2 2 2 2 2 2 2 2 2 1 2 X 3 X 2 X',
+  '8': '4 2 2 1 X 1 1 1 1 2 2 X 3 2 X X', '9': 'X X X X X X X X X X X X X X X X', MHB: 'X X X X X X X X X X X X 3 X X X'
+};
+const BULK_NOME = { '4.1': 'flammable solids', '4.2': 'substances liable to spontaneous combustion', '4.3': 'substances which, in contact with water, emit flammable gases', '5.1': 'oxidizing substances (agents)', '6.1': 'toxic substances', '7': 'radioactive material', '8': 'corrosive substances', '9': 'miscellaneous dangerous substances and articles', MHB: 'materials hazardous only in bulk (MHB)' };
+const colBulk = d => BULK_COL.findIndex(c => c.split(' ').includes(d.div));
+// definizioni di 7.6.3.5.3 (testo originale) e traduzione di lavoro, da verificare sull'edizione italiana
+const DEF_BULK = {
+  1: { en: 'Effectively segregated so that incompatible materials cannot interact dangerously in the event of an accident but may be transported in the same compartment or hold or on deck provided a minimum horizontal separation of 3 m, projected vertically, is provided.',
+    on: 'Almeno 3 m in orizzontale, proiettati verticalmente', under: 'Stesso compartimento o stiva ammesso, con almeno 3 m in orizzontale proiettati verticalmente' },
+  2: { en: 'In different holds when stowed under deck. Provided an intervening deck is resistant to fire and liquid, a vertical separation, i.e. in different compartments, may be accepted as equivalent to this segregation.',
+    on: '–', under: 'In stive differenti; separazione verticale (compartimenti differenti) ammessa se il ponte intermedio è resistente al fuoco e ai liquidi' },
+  3: { en: 'Either a vertical or a horizontal separation. If the decks are not resistant to fire and liquid, then only a longitudinal separation, i.e. by an intervening complete compartment, is acceptable.',
+    on: '–', under: 'Separazione verticale o orizzontale mediante un compartimento completo; se i ponti non sono resistenti al fuoco e ai liquidi, solo un compartimento completo intermedio in senso longitudinale' },
+  4: { en: 'Vertical separation alone does not meet this requirement.',
+    on: '–', under: 'Compartimento completo intermedio in senso longitudinale; la sola separazione verticale non basta' }
+};
+const lab = d => d.mhb ? 'MHB' : 'UN ' + d.u;
+// coppia del carico: con una rinfusa vale 7.6.3.5.2, fra due rinfuse il Codice IMSBC, altrimenti il capitolo 7.2
+function coppiaCarico(A, B) {
+  if (!A.rinfusa && !B.rinfusa) return coppia(A, B);
+  if (A.rinfusa && B.rinfusa) return { lev: 0, levDer: 0, levCond: 0, imsbc: true, rinfusa: true, ctu: false, note: [],
+    motivi: [{ lev: 0, txt: 'due materiali alla rinfusa: la segregazione fra rinfuse è stabilita dal Codice IMSBC (sezione 9.3 e schede delle merci), non calcolata dall\'app' }] };
+  const [K, Pk] = A.rinfusa ? [A, B] : [B, A];
+  if (Pk.lq || Pk.eq) return Object.assign(coppia(Object.assign({}, A, { rinfusa: false }), Object.assign({}, B, { rinfusa: false })), { rinfusa: true });
+  const M = [], N = ['segregazione fra rinfusa e merci imballate secondo 7.6.3.5.2, salvo prescrizioni diverse del Codice IMDG o del Codice IMSBC (7.6.3.5.1): verificare la scheda IMSBC della rinfusa'];
+  const riga = K.mhb ? 'MHB' : K.div, c = colBulk(Pk);
+  if (!TAB_BULK[riga]) M.push({ lev: 0, txt: `${lab(K)} (classe ${K.cl}) alla rinfusa: classe non prevista nelle righe della tabella 7.6.3.5.2; verificare il Codice IMSBC` });
+  else if (c < 0) M.push({ lev: 0, txt: `classe ${Pk.cl} della merce imballata non prevista nelle colonne della tabella 7.6.3.5.2` });
+  else {
+    const v = TAB_BULK[riga].split(' ')[c];
+    if (/^[1-4]$/.test(v)) M.push({ lev: +v, txt: `tabella 7.6.3.5.2: rinfusa ${K.mhb ? 'MHB' : 'classe ' + riga} (${BULK_NOME[riga]}) con merce imballata classe ${BULK_COL[c].replace(/ /g, '/')}: ${TERMINE[+v]}` });
+    else M.push({ lev: 0, txt: `tabella 7.6.3.5.2: rinfusa ${K.mhb ? 'MHB' : 'classe ' + riga} con merce imballata classe ${BULK_COL[c].replace(/ /g, '/')}: X – la segregazione, se esiste, è nella DGL o nella scheda IMSBC` });
+  }
+  if (K.sub.length || Pk.sub.length) N.push('la tabella 7.6.3.5.2 è applicata con la classe principale; i rischi sussidiari entrano tramite la colonna 16b e la scheda IMSBC (scelta dell\'app)');
+  if (!K.mhb) { // prescrizioni specifiche della colonna 16b (non la tabella 7.2.4)
+    const q = coppia(Object.assign({}, A, { rinfusa: false }), Object.assign({}, B, { rinfusa: false }));
+    for (const m of q.motivi) if (/SGG?\d/.test(m.txt) && !/^tabella/.test(m.txt)) M.push(Object.assign({}, m, { txt: m.txt + ' (colonna 16b della DGL)' }));
+    N.push(...q.note.filter(t => /SG/.test(t)));
+  }
+  const mx = L => Math.max(0, ...L.map(m => m.lev));
+  const lev = mx(M.filter(m => !m.cond)), levDer = mx(M.filter(m => !m.cond && !m.der)), levCond = mx(M);
+  return { lev, levDer, levCond, motivi: M, note: [...new Set(N)], ctu: false, rinfusa: true };
+}
+function bordoBulk(l) { return l ? Object.assign({ lev: l, par: '7.6.3.5.3' }, DEF_BULK[l]) : { lev: 0, par: '7.6.3.5.3', on: 'Nessuna segregazione richiesta', under: 'Nessuna segregazione richiesta', en: 'No segregation required' }; }
+
 function alimenti(d) { // 7.3.4.2
   const cls = [d.div, ...d.sub], gr = d.pg;
   const vieta = cls.some(c => ['2.3', '6.1', '6.2', '8'].includes(c)) || (cls.includes('7') && !['2908', '2909', '2910', '2911'].includes(d.u)) || d.sg.includes('SG29') || d.sg.includes('SG50');
@@ -343,4 +398,4 @@ function alimenti(d) { // 7.3.4.2
   const tre = !d.sg.includes('SG50') && ((['6.1', '8'].includes(d.div) && gr === 'III') || (d.div === '8' && gr === 'II') || (gr === 'III' && d.sub.some(c => ['6.1', '8'].includes(c))) || d.sg.includes('SG29'));
   return tre ? 'con alimenti solo ad almeno 3 m (7.3.4.2.2)' : 'non nella stessa unità di trasporto con alimenti (7.3.4.2.1)';
 }
-if (typeof module !== 'undefined') module.exports = { TAB_RORO, bordoRoro, DEF_GEN, livelloGen, bordoGen, alimentiGen, CAT_PAX, trad, COMBO_IT, cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE, TAB_CNT, bordo, combo, stivaggio, inf23 };
+if (typeof module !== 'undefined') module.exports = { coppiaCarico, TAB_BULK, BULK_COL, DEF_BULK, bordoBulk, lab, TAB_RORO, bordoRoro, DEF_GEN, livelloGen, bordoGen, alimentiGen, CAT_PAX, trad, COMBO_IT, cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE, TAB_CNT, bordo, combo, stivaggio, inf23 };
