@@ -95,4 +95,5 @@ for (const [u, V] of Object.entries(DATA.dgl)) V.forEach((r, i) => {
 });
 ok(liq === 0, 'nessuna voce di classe 2 o 3 ammessa alla rinfusa');
 ok(R.cgDati({ u: '3077', i: 0, opz: { unita: 'bk1' } }).aperto === true && R.cgDati({ u: '1408', i: 0, opz: { unita: 'bk2' } }).aperto === false, 'BK1 aperto, BK2 chiuso');
+ok(R.cgDati({ u: '1942', i: 0, opz: { unita: 'bk3' } }).aperto === true && !R.cgDati({ u: '1942', i: 0, opz: { unita: 'bk3' } }).colli, 'BK3 unità non chiusa');
 console.log(nbk, 'casi di bulk container; errori', bad);

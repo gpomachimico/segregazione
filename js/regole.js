@@ -189,7 +189,7 @@ function stivaggio(d, nave = {}) {
     BKX.push({ txt: 'nello stesso bulk container non mescolare sostanze che possono reagire pericolosamente fra loro', par: '4.3.1.14' });
     if (d.bk === 'BK3') {
       BKX.push({ txt: 'BK3 non ammesso nelle unità di trasporto', par: '7.3.3.18' });
-      if (t !== 'generale') BKX.push({ txt: 'BK3: stivaggio previsto nelle stive delle navi da carico generale (7.6.2.12); su questo tipo di nave l\'app lo tratta come unità aperta', par: '7.6.2.12' });
+      if (t !== 'generale') BKX.push({ txt: 'BK3: ammesso solo nelle stive delle navi da carico generale', par: '4.3.4.1, 7.6.2.12' });
       BKX.push({ txt: 'non sul ponte; senza spazi vuoti fra i contenitori in stiva (o misure contro lo spostamento); al massimo tre strati; dispositivi di sfiato liberi', par: '7.6.2.12' });
     }
   }
@@ -341,8 +341,8 @@ function cgDati(it) { // classe, divisione, gruppo di compatibilità, rischi sus
   const sgg = [...new Set(b16.filter(x => /^SGG/.test(x)).concat((o.sgg || '').toUpperCase().match(/SGG\d+/g) || []))];
   return { u: it.u, r, cl, div, cg, sub, sg: b16.filter(x => /^SG\d/.test(x)), sgg, nome: r['2'], pg: r['5'], lq: !!it.lq && !/rinfusa|bk|cisterna/.test(unita), eq: !!it.eq && !/rinfusa|bk|cisterna/.test(unita), o,
     nos: /N\.O\.S\./.test(r['2']), cl1: /^1/.test(cl), unita, bkAmmessi: bkAmmessi(it.u, r),
-    // v1.10: bulk container come unità di trasporto (BK2 chiusa, BK1 telonata = aperta, BK3 flessibile = come colli in stiva)
-    aperto: unita === 'aperta' || unita === 'bk1', colli: unita === 'colli' || unita === 'bk3', rinfusa: unita === 'rinfusa', cisterna: unita === 'cisterna', bk: /^bk[123]$/.test(unita) ? unita.toUpperCase() : null };
+    // bulk container come unità di trasporto (decisione di Luca, 27/11/2026): BK2 chiusa; BK1 telonata e BK3 flessibile non chiuse = aperte (1.2.1)
+    aperto: unita === 'aperta' || unita === 'bk1' || unita === 'bk3', colli: unita === 'colli', rinfusa: unita === 'rinfusa', cisterna: unita === 'cisterna', bk: /^bk[123]$/.test(unita) ? unita.toUpperCase() : null };
 }
 const rigaTab = div => { const m = div.match(/^1\.(\d)/); return m ? { 1: '1.1', 2: '1.1', 5: '1.1', 3: '1.3', 6: '1.3', 4: '1.4' }[m[1]] : div; };
 function righeTab(d, altro) { // righe della tabella 7.2.4 da usare per la merce d: [riga, origine]
