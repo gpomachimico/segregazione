@@ -63,4 +63,10 @@ with sync_playwright() as p:
     pg.click('#cgPrint'); rep = pg.text_content('#report'); print('report rinfuse', 'MHB' in rep, 'undefined' not in rep, 'NaN' not in rep)
     pg.reload(); pg.wait_for_timeout(800); print('MHB salvato', pg.locator('.cgv').count() == 4)
     pg.select_option('#nvTipo', 'chiuse'); pg.wait_for_timeout(200); print('rinfuse su portacontainer', 'scegliere questo tipo di nave' in pg.text_content('#cgRis'))
+    # v1.11: modalità di trasporto
+    pg.evaluate("localStorage.removeItem('carico')"); pg.goto('http://localhost:8766/index.html?u=0081,1600,1017,2186'); pg.wait_for_timeout(800)
+    sel = pg.locator('#cgLista select[data-k=unita]')
+    print('classe 1 senza unità aperta', sel.nth(0).locator('option[value=aperta]').count() == 0, 'fusa solo cisterna', sel.nth(1).locator('option').count() == 1 and sel.nth(1).locator('option[value=cisterna]').count() == 1)
+    print('cloro senza quantità limitate', pg.locator('#cgLista .cgv').nth(2).locator('input[data-k=lq]').count() == 0, 'UN 2186 vietata', 'trasporto vietato' in pg.locator('#cgLista .cgv').nth(3).text_content())
+    print('avviso globale', pg.locator('#cgRis p.err').count() == 1)
     print('ERR', errs); b.close()

@@ -1,6 +1,6 @@
 /* Verifica di segregazione del carico – interfaccia, impostazioni, report stampabile, uso offline */
 'use strict';
-const VERSIONE = '1.10-beta';
+const VERSIONE = '1.11-beta';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -56,7 +56,7 @@ function cgVoceHTML(it, n) {
   const R = DATA.dgl[it.u], d = cgDati(it), o = it.opz || {};
   let h = `<div class="cgv"><div><b>${n}. UN ${esc(it.u)}</b> – ${esc(d.nome.length > 90 ? d.nome.slice(0, 90) + '…' : d.nome)} <span class="small">(classe ${esc(d.cl)}${d.sub.length ? ', sussidiari ' + esc(d.sub.join('/')) : ''}${d.pg && d.pg !== '–' ? ', GI ' + esc(d.pg) : ''}${d.r['16b'] && d.r['16b'] !== '–' ? ', 16b ' + esc(d.r['16b']) : ''})</span></div><div class="row">`;
   if (R.length > 1) h += `<select data-k="i" data-n="${n - 1}">${R.map((r, j) => `<option value="${j}"${j === (it.i || 0) ? ' selected' : ''}>voce ${j + 1}: ${esc(r['2'].slice(0, 60))}${r['5'] && r['5'] !== '–' ? ' – GI ' + esc(r['5']) : ''}</option>`).join('')}</select>`;
-  h += `${d.rinfusa || d.bk ? '' : `<label class="ck"><input type="checkbox" data-k="lq" data-n="${n - 1}"${it.lq ? ' checked' : ''}> quantità limitate</label><label class="ck"><input type="checkbox" data-k="eq" data-n="${n - 1}"${it.eq ? ' checked' : ''}> quantità esenti</label>`}<select data-k="unita" data-n="${n - 1}" aria-label="Unità di trasporto">${unitaAmmesse(d, it.u).map(k => [k, UNITA[k]]).map(([k, v]) => `<option value="${k}"${k === d.unita ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
+  h += `${d.rinfusa || d.bk ? '' : `${lqAmmessa(d.r) || it.lq ? `<label class="ck"><input type="checkbox" data-k="lq" data-n="${n - 1}"${it.lq ? ' checked' : ''}> quantità limitate (${esc(d.r['7a'])})</label>` : ''}${eqAmmessa(d.r) || it.eq ? `<label class="ck"><input type="checkbox" data-k="eq" data-n="${n - 1}"${it.eq ? ' checked' : ''}> quantità esenti (${esc(d.r['7b'])})</label>` : ''}`}<select data-k="unita" data-n="${n - 1}" aria-label="Unità di trasporto">${unitaAmmesse(d).map(k => [k, UNITA[k]]).map(([k, v]) => `<option value="${k}"${k === d.unita ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
   if (d.r['3'] === '2') h += `<select data-k="div2" data-n="${n - 1}">${['2.1', '2.2', '2.3'].map(x => `<option${x === (o.div2 || '2.2') ? ' selected' : ''}>${x}</option>`).join('')}</select>`;
   if (d.sg.includes('SG69')) h += `<label class="ck"><input type="checkbox" data-k="aer1L" data-n="${n - 1}"${o.aer1L !== false ? ' checked' : ''}> capacità fino a 1 L</label>`;
   if (d.sg.includes('SG68')) h += `<label class="ck"><input type="checkbox" data-k="pf60" data-n="${n - 1}"${o.pf60 ? ' checked' : ''}> punto di infiammabilità ≤ 60 °C</label>`;
@@ -64,18 +64,18 @@ function cgVoceHTML(it, n) {
   if (d.nos) h += `<input type="text" data-k="sgg" data-n="${n - 1}" value="${esc(o.sgg || '')}" placeholder="gruppo SGG dal documento di trasporto" style="width:15em">`;
   h += `<button type="button" class="sec mini" data-k="via" data-n="${n - 1}">Togli</button></div>`;
   if (piuSussidiari(d)) h += `<div class="warn">Due o più rischi sussidiari (${esc(d.sub.join(', '))}): secondo 7.2.3.4 le prescrizioni sono quelle della colonna 16b; la tabella 7.2.4 si applica solo alla classe principale.<label class="ck"><input type="checkbox" data-k="subTab" data-n="${n - 1}"${o.subTab ? ' checked' : ''}> considera anche i rischi sussidiari nella tabella 7.2.4 (scelta oltre il testo del Codice, indicata nel report)</label></div>`;
+  const VM = verificaModalita(d, nave);
+  if (VM.length) h += VM.map(v => `<p class="${v.liv === 'errore' ? 'err' : 'warn'}">${v.liv === 'errore' ? 'Non ammesso' : 'Attenzione'}: ${esc(v.txt)} <span class="small">(${esc(v.par)})</span></p>`).join('');
   const al = d.rinfusa || (d.colli && nave.tipo === 'generale') ? '' : alimenti(d), ag = nave.tipo === 'generale' && !d.rinfusa ? alimentiGen(d) : '', fl = [al && 'Alimenti: ' + al, ag && 'Alimenti a bordo: ' + ag];
   for (const k of d.sg) if (['SG23', 'SG41', 'SG57', 'SG71', 'SG72', 'SG29', 'SG50'].includes(k)) fl.push(`${k}: ${DATA.imdgCod.SG[k]}`);
   if (fl.filter(Boolean).length) h += `<p class="small">${fl.filter(Boolean).map(esc).join(' · ')}</p>`;
   if (d.cl === '1' && d.u === '0190') h += '<p class="small">Campioni di esplosivo: divisione e gruppo di compatibilità non indicati nella DGL; si usa la divisione 1.1, la più severa, e nessuna compatibilità con altre merci della classe 1.</p>';
   return h + '</div>';
 }
-const UNITA = { chiusa: 'unità chiusa', aperta: 'unità aperta', colli: 'colli, stivaggio convenzionale', bk2: 'bulk container chiuso (BK2)', bk1: 'bulk container telonato (BK1)', bk3: 'bulk container flessibile (BK3)', rinfusa: 'solido alla rinfusa sciolto in stiva (IMSBC)' };
-const UNITA_TXT = { aperta: 'unità aperta', colli: 'colli in stivaggio convenzionale', bk1: 'bulk container telonato BK1', bk2: 'bulk container chiuso BK2', bk3: 'bulk container flessibile BK3', rinfusa: 'solido alla rinfusa sciolto in stiva' };
+const UNITA = { chiusa: 'unità chiusa', aperta: 'unità aperta', cisterna: 'cisterna (colonna 13)', colli: 'colli, stivaggio convenzionale', bk2: 'bulk container chiuso (BK2)', bk1: 'bulk container telonato (BK1)', bk3: 'bulk container flessibile (BK3)', rinfusa: 'solido alla rinfusa sciolto in stiva (IMSBC)' };
+const UNITA_TXT = { aperta: 'unità aperta', cisterna: 'in cisterna', colli: 'colli in stivaggio convenzionale', bk1: 'bulk container telonato BK1', bk2: 'bulk container chiuso BK2', bk3: 'bulk container flessibile BK3', rinfusa: 'solido alla rinfusa sciolto in stiva' };
 // unità proposte per una voce: bulk container solo se previsti dalla colonna 13; rinfusa sciolta e BK3 solo su nave da carico generale
-const unitaAmmesse = (d, u) => Object.keys(UNITA).filter(k => k === d.unita || ['chiusa', 'aperta'].includes(k) || (k === 'colli' && nave.tipo === 'generale') ||
-  (k === 'bk2' && d.bkAmmessi.includes('BK2')) || (k === 'bk1' && d.bkAmmessi.includes('BK1')) || (k === 'bk3' && d.bkAmmessi.includes('BK3') && nave.tipo === 'generale') ||
-  (k === 'rinfusa' && nave.tipo === 'generale' && rinfusaStivaAmmessa(u, d.r)));
+const unitaAmmesse = d => modiOfferti(d, nave.tipo);
 const cella = p => p.imsbc ? '<td class="n cgl0" title="segregazione fra rinfuse: Codice IMSBC">R</td>' : `<td class="n cgl${p.lev}">${p.lev ? p.lev : '–'}${p.levDer < p.lev ? '<sup>d</sup>' : ''}${p.levCond > p.lev ? '*' : ''}${p.motivi.some(m => m.opz && m.lev === p.lev && p.lev) ? '<sup>u</sup>' : ''}</td>`;
 // prescrizioni a bordo di una coppia secondo il tipo di nave: celle in italiano (it) e testo originale (en)
 function bordoCoppia(A, B, l) {
@@ -157,7 +157,9 @@ function caricoRisHTML(perStampa = false) {
   if (n < 2) return `<p class="${cls}">Aggiungere almeno due merci.</p>`;
   const P = {};
   for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) P[a + '-' + b] = coppiaCarico(D[a], D[b]);
-  let h = `<h3>Matrice di segregazione</h3><div class="scroll"><table class="segr cgm"><tr><th></th>${D.map((d, j) => `<th>${j + 1}</th>`).join('')}</tr>`;
+  const nErr = D.filter(d => verificaModalita(d, nave).some(v => v.liv === 'errore')).length;
+  let h = nErr ? `<p class="err">${nErr === 1 ? 'Una merce ha' : nErr + ' merci hanno'} una modalità di trasporto non ammessa dal Codice: vedere ${perStampa ? 'l\'elenco delle merci' : 'la voce nella lista'}.</p>` : '';
+  h += `<h3>Matrice di segregazione</h3><div class="scroll"><table class="segr cgm"><tr><th></th>${D.map((d, j) => `<th>${j + 1}</th>`).join('')}</tr>`;
   D.forEach((d, a) => { h += `<tr><td>${a + 1}. ${esc(lab(d))}${d.rinfusa ? ' <span class="small">(rinfusa)</span>' : ''}</td>${D.map((e, b) => a === b ? '<td class="n">·</td>' : cella(P[Math.min(a, b) + '-' + Math.max(a, b)])).join('')}</tr>`; });
   // legenda: una voce per riga (richiesta di Luca, v1.7)
   const leg = [0, 1, 2, 3, 4].map(l => `<b>${l || '–'}</b> = ${l ? esc(TERMINE[l]) + ' (' + esc(TERMINE_IT[l]) + ')' : esc(TERMINE_IT[0])}`);
@@ -259,7 +261,7 @@ $('cgPrint').onclick = () => {
   const s = leggiImpostazioni(), quando = new Date().toLocaleString('it-IT', { dateStyle: 'long', timeStyle: 'short' }), rif = $('cgRif').value.trim();
   let h = s.carta ? cartaHTML() : '';
   h += `<div class="intest"><h1>Verifica di segregazione del carico</h1><table class="dati"><tr><td>Data di redazione</td><td>${esc(quando)}</td></tr>${rif ? `<tr><td>Carico</td><td>${esc(rif)}</td></tr>` : ''}<tr><td>Riferimenti</td><td>IMDG Code, Emendamento 42-24 (Ris. MSC.556(108)), capitoli 3.4, 3.5, 7.1, 7.2, 7.3 e 7.4</td></tr></table></div>`;
-  h += '<h3>Merci del carico</h3><table class="dati merci">' + carico.map((it, j) => { const d = cgDati(it); return `<tr><td>${j + 1}. ${esc(lab(d))}</td><td>${esc(d.nome)} – ${d.mhb ? 'materiale pericoloso solo alla rinfusa (MHB)' : 'classe ' + esc(d.cl)}${UNITA_TXT[d.unita] ? '; ' + UNITA_TXT[d.unita] : ''}${d.sub.length ? ', rischi sussidiari ' + esc(d.sub.join('/')) : ''}${d.pg && d.pg !== '–' ? ', GI ' + esc(d.pg) : ''}; 16b: ${esc(d.r['16b'] || '–')}${d.sgg.length && d.o.sgg ? '; gruppo dichiarato ' + esc(d.o.sgg) : ''}${it.lq ? '; quantità limitate' : ''}${it.eq ? '; quantità esenti' : ''}${piuSussidiari(d) && d.o.subTab ? '; tabella 7.2.4 applicata anche ai rischi sussidiari per scelta dell\'utente' : ''}${alimenti(d) ? '; alimenti: ' + esc(alimenti(d)) : ''}</td></tr>`; }).join('') + '</table>';
+  h += '<h3>Merci del carico</h3><table class="dati merci">' + carico.map((it, j) => { const d = cgDati(it); return `<tr><td>${j + 1}. ${esc(lab(d))}</td><td>${esc(d.nome)} – ${d.mhb ? 'materiale pericoloso solo alla rinfusa (MHB)' : 'classe ' + esc(d.cl)}${UNITA_TXT[d.unita] ? '; ' + UNITA_TXT[d.unita] : ''}${d.sub.length ? ', rischi sussidiari ' + esc(d.sub.join('/')) : ''}${d.pg && d.pg !== '–' ? ', GI ' + esc(d.pg) : ''}; 16b: ${esc(d.r['16b'] || '–')}${d.sgg.length && d.o.sgg ? '; gruppo dichiarato ' + esc(d.o.sgg) : ''}${it.lq ? '; quantità limitate' : ''}${it.eq ? '; quantità esenti' : ''}${piuSussidiari(d) && d.o.subTab ? '; tabella 7.2.4 applicata anche ai rischi sussidiari per scelta dell\'utente' : ''}${alimenti(d) ? '; alimenti: ' + esc(alimenti(d)) : ''}${verificaModalita(d, nave).map(v => `<br><b>${v.liv === 'errore' ? 'Non ammesso' : 'Attenzione'}</b>: ${esc(v.txt)} (${esc(v.par)})`).join('')}</td></tr>`; }).join('') + '</table>';
   h += `<table class="dati"><tr><td>Nave</td><td>${esc(NAVE_TIPO[nave.tipo])}${nave.tipo === 'chiuse' ? '; ' + esc(COPERT[nave.copert]) : ''}${['roro', 'generale'].includes(nave.tipo) ? '; ' + esc(PAX[nave.pax || 'carico']) : ''}${nave.vecchia ? '; costruita prima del 1/9/1984 (≥ 500 GT) o del 1/2/1992 (< 500 GT)' : ''}</td></tr></table>`;
   h += caricoRisHTML(true);
   h += `<p class="nota">Parere tecnico di supporto redatto con l'app Verifica di segregazione v${VERSIONE}: non è un atto amministrativo e non sostituisce la consultazione del testo ufficiale del Codice IMDG.</p>`;

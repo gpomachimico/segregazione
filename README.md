@@ -10,7 +10,7 @@ Indirizzo: https://gpomachimico.github.io/segregazione/
 - `js/regole.js` – regole di segregazione (senza interfaccia, usabile anche con Node)
 - `js/app.js` – inserimento delle merci, matrice, dettaglio per coppia, report stampabile, impostazioni
 - `sw.js`, `manifest.webmanifest`, `icons/` – installazione e uso offline
-- `test/` – `esempi.js` (esempi del Codice), `coppie.js` (200 000 coppie casuali), `bordo.js` (tabelle 7.4.3.2 e 7.4.3.3, stivaggio di tutte le voci), `browser.py` (prova nel browser)
+- `test/` – `esempi.js` (esempi del Codice), `coppie.js` (200 000 coppie casuali), `bordo.js` (tabelle a bordo, rinfuse, bulk container, stivaggio di tutte le voci), `tabelle_it.js` (celle dell'edizione italiana), `modalita.js` (modalità di trasporto di tutte le voci), `browser.py` (prova nel browser)
 
 ## Collegamento da altre app
 `https://gpomachimico.github.io/segregazione/?u=1017,1005` apre l'app con le merci indicate già nel carico.
