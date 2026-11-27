@@ -32,4 +32,8 @@ with sync_playwright() as p:
     pg.click('#cgPrint'); rep = pg.inner_text('#report'); print('REP', len(rep), 'BAD' if 'undefined' in rep else 'ok', 'scelta utente' if "scelta dell'utente" in rep else 'NO SCELTA')
     pg.emulate_media(media='print'); pg.pdf(path='/tmp/report.pdf', format='A4'); pg.emulate_media(media='screen')
     pg.reload(); pg.wait_for_timeout(1000); print('persist', pg.locator('.cgv').count(), 'nave', pg.input_value('#nvCop'))
+    pg.goto('http://localhost:8766/index.html?u=1489,2014,0081,0339'); pg.wait_for_timeout(800)
+    print('legenda righe', pg.locator('ul.leg li').count(), 'coppie segnalate', pg.locator('ul.segnalate > li').count())
+    pg.locator('h3:has-text("Matrice")').evaluate('e=>e.scrollIntoView()'); pg.locator('#cgRis').screenshot(path='/tmp/segn.png')
+    pg.click('#cgPrint'); print('report segnalate', pg.locator('#report ul.segnalate > li').count())
     print('ERR', errs); b.close()

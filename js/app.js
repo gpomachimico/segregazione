@@ -1,6 +1,6 @@
 /* Verifica di segregazione del carico – interfaccia, impostazioni, report stampabile, uso offline */
 'use strict';
-const VERSIONE = '1.6-beta';
+const VERSIONE = '1.7-beta';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -101,6 +101,21 @@ function stivaggioHTML(D, perStampa) { // prescrizioni di stivaggio per merce (7
   });
   return h;
 }
+function segnalateHTML(D, P, cls) { // elenco fisso delle coppie con *, d o u, sempre sullo schermo e nel report (richiesta di Luca, v1.7)
+  const R = [];
+  for (const [k, p] of Object.entries(P)) {
+    const [a, b] = k.split('-').map(Number), voci = [];
+    const fmt = l => l ? `${TERMINE[l]} (${TERMINE_IT[l]})` : TERMINE_IT[0];
+    for (const m of p.motivi.filter(m => m.cond && m.lev > p.lev)) voci.push(`<b>*</b> ${esc(fmt(m.lev))} ${/^se\b/.test(m.cond) ? '' : 'se: '}${esc(m.cond)} <span class="small">(${esc(m.txt)})</span>`);
+    if (p.levDer < p.lev) {
+      const der = p.motivi.filter(m => m.der && !m.cond && m.lev > p.levDer);
+      voci.push(`<b><sup>d</sup></b> ${esc(fmt(p.levDer))} invece di ${esc(TERMINE[p.lev])}: ${esc([...new Set(der.map(m => typeof m.der === 'string' ? m.der : 'deroga secondo 7.2.6.1 se le merci non reagiscono pericolosamente fra loro'))].join('; '))}`);
+    }
+    if (p.lev && p.motivi.some(m => m.opz && m.lev === p.lev)) voci.push(`<b><sup>u</sup></b> ${esc(fmt(p.lev))} per la scelta dell'utente di applicare la tabella 7.2.4 ai rischi sussidiari (oltre 7.2.3.4)`);
+    if (voci.length) R.push(`<li><b>${a + 1}–${b + 1}</b>: UN ${esc(D[a].u)} / UN ${esc(D[b].u)} → ${esc(p.lev ? TERMINE[p.lev] : TERMINE_IT[0])}<ul>${voci.map(v => `<li>${v}</li>`).join('')}</ul></li>`);
+  }
+  return R.length ? `<h3>Coppie con condizioni o deroghe</h3><ul class="segnalate">${R.join('')}</ul>` : '';
+}
 function caricoRisHTML(perStampa = false) {
   const D = carico.map(cgDati), n = D.length, cls = perStampa ? 'nota' : 'small';
   if (n < 2) return `<p class="${cls}">Aggiungere almeno due merci.</p>`;
@@ -108,7 +123,13 @@ function caricoRisHTML(perStampa = false) {
   for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) P[a + '-' + b] = coppia(D[a], D[b]);
   let h = `<h3>Matrice di segregazione</h3><div class="scroll"><table class="segr cgm"><tr><th></th>${D.map((d, j) => `<th>${j + 1}</th>`).join('')}</tr>`;
   D.forEach((d, a) => { h += `<tr><td>${a + 1}. UN ${esc(d.u)}</td>${D.map((e, b) => a === b ? '<td class="n">·</td>' : cella(P[Math.min(a, b) + '-' + Math.max(a, b)])).join('')}</tr>`; });
-  h += `</table></div><p class="${cls}">${[0, 1, 2, 3, 4].map(l => `${l || '–'} = ${l ? TERMINE[l] + ' (' + TERMINE_IT[l] + ')' : TERMINE_IT[0]}`).join(' · ')}. <sup>d</sup> = deroga possibile (7.2.6.1 o 7.2.6.5) se ne ricorrono le condizioni; * = prescrizione più severa se ricorrono condizioni da verificare sulla merce; <sup>u</sup> = livello dovuto alla scelta dell'utente di considerare i rischi sussidiari oltre 7.2.3.4.</p>`;
+  // legenda: una voce per riga (richiesta di Luca, v1.7)
+  const leg = [0, 1, 2, 3, 4].map(l => `<b>${l || '–'}</b> = ${l ? esc(TERMINE[l]) + ' (' + esc(TERMINE_IT[l]) + ')' : esc(TERMINE_IT[0])}`);
+  leg.push('<b><sup>d</sup></b> = deroga possibile (7.2.6.1 o 7.2.6.5) se ne ricorrono le condizioni',
+    '<b>*</b> = prescrizione più severa se ricorrono condizioni da verificare sulla merce',
+    '<b><sup>u</sup></b> = livello dovuto alla scelta dell\'utente di considerare i rischi sussidiari oltre 7.2.3.4');
+  h += `</table></div><ul class="leg ${cls}">${leg.map(x => `<li>${x}</li>`).join('')}</ul>`;
+  h += segnalateHTML(D, P, cls);
   h += bordoHTML(D, P, cls, perStampa);
   // dettaglio per coppia: sullo schermo solo a richiesta, nel report solo se attivato (richiesta di Luca, v1.5)
   if (!perStampa || tabCoppie) h += '<h3>Dettaglio per coppia</h3>';
