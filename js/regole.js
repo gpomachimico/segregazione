@@ -500,4 +500,46 @@ function alimenti(d) { // 7.3.4.2
   const tre = !d.sg.includes('SG50') && ((['6.1', '8'].includes(d.div) && gr === 'III') || (d.div === '8' && gr === 'II') || (gr === 'III' && d.sub.some(c => ['6.1', '8'].includes(c))) || d.sg.includes('SG29'));
   return tre ? 'con alimenti solo ad almeno 3 m (7.3.4.2.2)' : 'non nella stessa unità di trasporto con alimenti (7.3.4.2.1)';
 }
-if (typeof module !== 'undefined') module.exports = { ems, SG_COME, SG_CLASSE, SG_GRUPPO, SG_NOME, ESENTI, ESENTI4, vietata, nonSoggetta, lqAmmessa, eqAmmessa, modiOfferti, MODI, verificaModalita, haImballaggio, haCisterna, bkAmmessi, rinfusaStivaAmmessa, coppiaCarico, TAB_BULK, BULK_COL, DEF_BULK, bordoBulk, lab, TAB_RORO, bordoRoro, DEF_GEN, livelloGen, bordoGen, alimentiGen, CAT_PAX, trad, COMBO_IT, cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE, TAB_CNT, bordo, combo, stivaggio, inf23 };
+// ---------- unità di trasporto con carico misto (richiesta di Luca, 28/11/2026, v1.16) ----------
+// merci con la stessa sigla (targa, sigla del container o altro identificativo) nella stessa unità chiusa o aperta;
+// cisterne, bulk container, colli in stivaggio convenzionale e rinfuse restano unità con una sola merce
+const MISTA = ['chiusa', 'aperta'];
+const siglaNorm = s => String(s || '').toUpperCase().replace(/[\s.\-\/]+/g, ''); // spazi, punti, trattini e barre non contano
+function raggruppa(D) { // ritorna { E: [[indici delle merci]], err: [{ sigla, txt, par }] } nell'ordine della lista
+  const per = new Map(), err = [], gruppo = new Map();
+  D.forEach((d, i) => { const s = !d.mhb && siglaNorm(d.o && d.o.sigla); if (s) { if (!per.has(s)) per.set(s, []); per.get(s).push(i); } });
+  for (const [s, I] of per) {
+    if (I.length < 2) continue;
+    const non = I.filter(i => !MISTA.includes(D[i].unita));
+    if (non.length) { err.push({ sigla: s, txt: `la sigla ${s} è indicata per più merci, ma ${non.map(i => `${i + 1}. ${lab(D[i])}`).join(', ')} non ${non.length > 1 ? 'sono merci imballate' : 'è una merce imballata'} in unità chiusa o aperta: cisterne, bulk container, colli in stivaggio convenzionale e rinfuse non formano un'unità con altre merci; merci considerate in unità separate`, par: '1.2.1, 7.3.4.1' }); continue; }
+    if (new Set(I.map(i => D[i].unita)).size > 1) { err.push({ sigla: s, txt: `unità ${s}: indicata come chiusa per alcune merci e aperta per altre; correggere il tipo di unità; merci considerate in unità separate`, par: '1.2.1' }); continue; }
+    gruppo.set(I[0], I); I.slice(1).forEach(i => gruppo.set(i, null));
+  }
+  const E = [];
+  D.forEach((d, i) => { const g = gruppo.get(i); if (g === undefined) E.push([i]); else if (g) E.push(g); });
+  return { E, err };
+}
+function verificaUnita(D, I, P) { // 7.3.4.1 e 7.2.7: merci nella stessa unità; P: risultati delle coppie di merci "a-b"
+  const R = [], nm = i => `${i + 1}. ${lab(D[i])}`, T = l => `${TERMINE[l]} (${TERMINE_IT[l]})`;
+  for (let x = 0; x < I.length; x++) for (let y = x + 1; y < I.length; y++) {
+    const a = I[x], b = I[y], p = P[a + '-' + b], lev = p.lev, der = p.levDer ?? lev, cnd = p.levCond ?? lev, cp = `${nm(a)} / ${nm(b)}`;
+    if (lev >= 2 && der >= 2) R.push({ liv: 'errore', txt: `${cp}: ${T(lev)}: non possono stare nella stessa unità di trasporto`, par: '7.3.4.1' });
+    else if (lev >= 2) R.push({ liv: 'avviso', txt: `${cp}: ${T(lev)}; nella stessa unità solo se si applica la deroga indicata per la coppia (livello ridotto a ${der ? TERMINE[der] : 'nessuna segregazione'})${der === 1 ? ' e con l\'approvazione dell\'autorità competente' : ''}`, par: der === 1 ? '7.2.6, 7.3.4.1' : '7.2.6' });
+    else if (lev === 1) R.push({ liv: 'avviso', txt: `${cp}: ${T(1)}: nella stessa unità di trasporto solo con l'approvazione dell'autorità competente, mantenendo un livello di sicurezza equivalente`, par: '7.3.4.1' });
+    else if (p.ctu === false && !p.rinfusa) R.push({ liv: 'errore', txt: `${cp}: ${p.motivi.map(m => m.txt).join('; ')}`, par: '7.2.7, 7.3.4.1' });
+    if (cnd > lev) R.push({ liv: 'avviso', txt: `${cp}: ${T(cnd)} se ricorrono le condizioni indicate per la coppia${cnd >= 2 ? ': in tal caso non nella stessa unità' : ': in tal caso solo con l\'approvazione dell\'autorità competente'}`, par: '7.3.4.1' });
+  }
+  return R;
+}
+function coppiaUnita(D, Ia, Ib, P) { // segregazione fra due unità: prevale la coppia di merci più severa
+  if (Ia.length === 1 && Ib.length === 1) { const [a, b] = [Ia[0], Ib[0]]; return P[Math.min(a, b) + '-' + Math.max(a, b)]; }
+  const L = [];
+  for (const a of Ia) for (const b of Ib) L.push([a, b, P[Math.min(a, b) + '-' + Math.max(a, b)]]);
+  const mx = f => Math.max(0, ...L.map(f)), lev = mx(x => x[2].lev);
+  return { lev, levDer: mx(x => x[2].levDer ?? x[2].lev), levCond: mx(x => x[2].levCond ?? x[2].lev), ctu: false, unita: true,
+    rinfusa: L.some(x => x[2].rinfusa), imsbc: L.every(x => x[2].imsbc), coppie: L,
+    motivi: L.flatMap(([a, b, p]) => p.motivi.map(m => Object.assign({}, m, { txt: `${a + 1}–${b + 1} (${lab(D[a])} / ${lab(D[b])}): ${m.txt}` }))),
+    note: [...new Set(L.flatMap(x => x[2].note || []))] };
+}
+
+if (typeof module !== 'undefined') module.exports = { MISTA, siglaNorm, raggruppa, verificaUnita, coppiaUnita, ems, SG_COME, SG_CLASSE, SG_GRUPPO, SG_NOME, ESENTI, ESENTI4, vietata, nonSoggetta, lqAmmessa, eqAmmessa, modiOfferti, MODI, verificaModalita, haImballaggio, haCisterna, bkAmmessi, rinfusaStivaAmmessa, coppiaCarico, TAB_BULK, BULK_COL, DEF_BULK, bordoBulk, lab, TAB_RORO, bordoRoro, DEF_GEN, livelloGen, bordoGen, alimentiGen, CAT_PAX, trad, COMBO_IT, cgDati, coppia, alimenti, TERMINE, TERMINE_IT, NAVE, TAB_CNT, bordo, combo, stivaggio, inf23 };

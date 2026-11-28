@@ -17,7 +17,7 @@
   <div class="hrow">
     <div>
       <h1>Verifica di segregazione del carico</h1>
-      <p>v1.15-beta · IMDG Code 42-24, capitoli 7.2, 7.4, 7.5 e 7.6 · parere tecnico di supporto, non atto amministrativo<span id="netstato"></span></p>
+      <p>v1.16-beta · IMDG Code 42-24, capitoli 7.2, 7.4, 7.5 e 7.6 · parere tecnico di supporto, non atto amministrativo<span id="netstato"></span></p>
     </div>
     <button id="btnSet" class="icon" type="button" aria-label="Impostazioni">⚙</button>
   </div>
@@ -41,6 +41,7 @@
   <div class="row"><input id="cgMhb" type="text" placeholder="nome come nel Codice IMSBC, es. COAL" aria-label="Nome del materiale MHB"><button id="cgMhbAdd" type="button" class="sec mini">Aggiungi MHB</button></div>
   <p class="small">Solidi della DGL alla rinfusa: si inseriscono col numero ONU e si sceglie come unità il bulk container (BK2, BK1, BK3, se previsti dalla colonna 13) oppure, su nave da carico generale, “solido alla rinfusa sciolto in stiva”. Le rinfuse liquide non sono considerate.</p></details>
   <p class="small" id="cgMsg"></p>
+  <label class="ck"><input type="checkbox" id="cgRagg"> Raggruppa per unità di trasporto: le merci con la stessa sigla (targa del mezzo, sigla del container o altro identificativo) sono nella stessa unità chiusa o aperta</label>
   <div id="cgLista"></div>
   <label for="cgRif">Riferimento del carico (facoltativo, riportato nel report)</label>
   <input id="cgRif" type="text" placeholder="es. nave, viaggio, container">

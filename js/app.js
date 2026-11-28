@@ -1,6 +1,6 @@
 /* Verifica di segregazione del carico – interfaccia, impostazioni, report stampabile, uso offline */
 'use strict';
-const VERSIONE = '1.15-beta';
+const VERSIONE = '1.16-beta';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -42,8 +42,8 @@ try { carico = JSON.parse(localStorage.getItem('carico') || '[]'); } catch (e) {
 const salvaCarico = () => { try { localStorage.setItem('carico', JSON.stringify(carico)); localStorage.setItem('nave', JSON.stringify(nave)); } catch (e) { } };
 // nave (v1.1): tipo di portacontainer, coperchi delle boccaporte, nave costruita prima delle date di 7.4.2.3.1 e 7.4.2.4.1
 let nave = { tipo: 'chiuse', copert: 'stagni', vecchia: false, pax: 'carico' };
-let tabBordo = false, tabCoppie = false;
-try { tabBordo = localStorage.getItem('tabBordo') === '1'; tabCoppie = localStorage.getItem('tabCoppie') === '1'; } catch (e) { }
+let tabBordo = false, tabCoppie = false, tabMerci = false, raggr = false;
+try { tabBordo = localStorage.getItem('tabBordo') === '1'; tabCoppie = localStorage.getItem('tabCoppie') === '1'; tabMerci = localStorage.getItem('tabMerci') === '1'; raggr = localStorage.getItem('raggruppa') === '1'; } catch (e) { }
 try { nave = Object.assign(nave, JSON.parse(localStorage.getItem('nave') || '{}')); } catch (e) { }
 const NAVE_TIPO = { chiuse: 'portacontainer con stive chiuse (7.4.3.2)', senza: 'portacontainer senza boccaporti (hatchless, 7.4.3.3)', roro: 'nave ro-ro (7.5.3.2)', generale: 'nave da carico generale, stivaggio convenzionale (7.6.3)' };
 const PAX = { carico: 'nave da carico o passeggeri entro 25 (o 1 ogni 3 m di lunghezza; per la classe 1 entro 12)', pax: 'nave passeggeri oltre tale numero' };
@@ -57,6 +57,7 @@ function cgVoceHTML(it, n) {
   let h = `<div class="cgv"><div><b>${n}. UN ${esc(it.u)}</b> – ${esc(d.nome.length > 90 ? d.nome.slice(0, 90) + '…' : d.nome)} <span class="small">(classe ${esc(d.cl)}${d.sub.length ? ', sussidiari ' + esc(d.sub.join('/')) : ''}${d.pg && d.pg !== '–' ? ', GI ' + esc(d.pg) : ''}${d.r['16b'] && d.r['16b'] !== '–' ? ', 16b ' + esc(d.r['16b']) : ''}${ems(d) ? ', EmS ' + esc(ems(d)) : ''})</span></div><div class="row">`;
   if (R.length > 1) h += `<select data-k="i" data-n="${n - 1}">${R.map((r, j) => `<option value="${j}"${j === (it.i || 0) ? ' selected' : ''}>voce ${j + 1}: ${esc(r['2'].slice(0, 60))}${r['5'] && r['5'] !== '–' ? ' – GI ' + esc(r['5']) : ''}</option>`).join('')}</select>`;
   h += `${d.rinfusa || d.bk ? '' : `${lqAmmessa(d.r) || it.lq ? `<label class="ck"><input type="checkbox" data-k="lq" data-n="${n - 1}"${it.lq ? ' checked' : ''}> quantità limitate (${esc(d.r['7a'])})</label>` : ''}${eqAmmessa(d.r) || it.eq ? `<label class="ck"><input type="checkbox" data-k="eq" data-n="${n - 1}"${it.eq ? ' checked' : ''}> quantità esenti (${esc(d.r['7b'])})</label>` : ''}`}<select data-k="unita" data-n="${n - 1}" aria-label="Unità di trasporto">${unitaAmmesse(d).map(k => [k, UNITA[k]]).map(([k, v]) => `<option value="${k}"${k === d.unita ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
+  if (raggr && !d.rinfusa) h += `<input type="text" data-k="sigla" data-n="${n - 1}" value="${esc(o.sigla || '')}" placeholder="unità: targa, sigla container…" aria-label="Identificativo dell'unità di trasporto" style="width:13em">`;
   if (d.r['3'] === '2') h += `<select data-k="div2" data-n="${n - 1}">${['2.1', '2.2', '2.3'].map(x => `<option${x === (o.div2 || '2.2') ? ' selected' : ''}>${x}</option>`).join('')}</select>`;
   if (d.sg.includes('SG69')) h += `<label class="ck"><input type="checkbox" data-k="aer1L" data-n="${n - 1}"${o.aer1L !== false ? ' checked' : ''}> capacità fino a 1 L</label>`;
   if (d.sg.includes('SG68')) h += `<label class="ck"><input type="checkbox" data-k="pf60" data-n="${n - 1}"${o.pf60 ? ' checked' : ''}> punto di infiammabilità ≤ 60 °C</label>`;
@@ -112,7 +113,7 @@ function bordoHTML(D, P, cls, perStampa) { // tabella a bordo: 7.4.3.2, 7.4.3.3,
       if (t !== 'generale' && (D[a].rinfusa || D[b].rinfusa)) continue;
       const bc = bordoCoppia(D[a], D[b], l);
       const et = t === 'generale' ? `${esc(bc.lev ? TERMINE_IT[bc.lev] : TERMINE_IT[0])}${bc.bulk ? ' (rinfusa, 7.6.3.5.3)' : ''}${bc.rid ? ` invece di ${esc(TERMINE_IT[l])} (${bc.par})` : ''}` : `${esc(TERMINE_IT[l])}; ${COMBO_IT[bc.cm]}`;
-      h += `<tr><td>${a + 1}–${b + 1}${cond ? ' *' : ''}<br><span class="small">${et}</span></td>${bc.it.map(x => `<td>${esc(x)}</td>`).join('')}</tr>`;
+      h += `<tr><td>${D[a].nn}–${D[b].nn}${cond ? ' *' : ''}<br><span class="small">${et}</span></td>${bc.it.map(x => `<td>${esc(x)}</td>`).join('')}</tr>`;
     }
     const nota = t === 'generale'
       ? `Sintesi delle definizioni di 7.6.3.2 (edizione italiana del Codice), con le eccezioni di 7.6.3.3 (colli con unità di trasporto) e 7.6.3.4 (unità chiuse in stive non attrezzate per container); fa fede il testo inglese, riportato nel dettaglio di ogni coppia. Per “separato mediante un compartimento completo o una stiva da”: uno dei due ponti deve essere resistente al fuoco e ai liquidi (nota della figura di 7.6.3.2).`
@@ -148,19 +149,50 @@ function segnalateHTML(D, P, cls) { // elenco fisso delle coppie con *, d o u, s
       voci.push(`<b><sup>d</sup></b> ${esc(fmt(p.levDer))} invece di ${esc(TERMINE[p.lev])}: ${esc([...new Set(der.map(m => typeof m.der === 'string' ? m.der : 'deroga secondo 7.2.6.1 se le merci non reagiscono pericolosamente fra loro'))].join('; '))}`);
     }
     if (p.lev && p.motivi.some(m => m.opz && m.lev === p.lev)) voci.push(`<b><sup>u</sup></b> ${esc(fmt(p.lev))} per la scelta dell'utente di applicare la tabella 7.2.4 ai rischi sussidiari (oltre 7.2.3.4)`);
-    if (voci.length) R.push(`<li><b>${a + 1}–${b + 1}</b>: ${esc(lab(D[a]))} / ${esc(lab(D[b]))} → ${esc(p.lev ? TERMINE[p.lev] : TERMINE_IT[0])}<ul>${voci.map(v => `<li>${v}</li>`).join('')}</ul></li>`);
+    if (voci.length) R.push(`<li><b>${D[a].nn}–${D[b].nn}</b>: ${esc(et(D[a]))} / ${esc(et(D[b]))} → ${esc(p.lev ? TERMINE[p.lev] : TERMINE_IT[0])}<ul>${voci.map(v => `<li>${v}</li>`).join('')}</ul></li>`);
   }
   return R.length ? `<h3>Coppie con condizioni o deroghe</h3><ul class="segnalate">${R.join('')}</ul>` : '';
 }
-function caricoRisHTML(perStampa = false) {
-  const D = carico.map(cgDati), n = D.length, cls = perStampa ? 'nota' : 'small';
-  if (n < 2) return `<p class="${cls}">Aggiungere almeno due merci.</p>`;
+// etichetta e numero di una riga della matrice: merce singola o unità con carico misto (v1.16)
+const et = d => d.etich || lab(d);
+function unitaCarico(DM, PM) { // unità di trasporto del carico: con l'opzione attiva, merci con la stessa sigla raggruppate
+  if (!raggr) return { D: DM.map((d, j) => Object.assign({}, d, { nn: String(j + 1) })), P: PM, G: { E: DM.map((d, j) => [j]), err: [] }, misto: false };
+  const G = raggruppa(DM), misto = G.E.some(I => I.length > 1);
+  const D = G.E.map(I => I.length === 1 ? Object.assign({}, DM[I[0]], { nn: String(I[0] + 1), etich: lab(DM[I[0]]) + (siglaNorm(DM[I[0]].o.sigla) ? ' – ' + siglaNorm(DM[I[0]].o.sigla) : '') })
+    : Object.assign({}, DM[I[0]], { nn: I.map(i => i + 1).join('+'), etich: `${siglaNorm(DM[I[0]].o.sigla)} (${I.map(i => lab(DM[i])).join(', ')})`, cl1: I.some(i => DM[i].cl1), membri: I }));
   const P = {};
-  for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) P[a + '-' + b] = coppiaCarico(D[a], D[b]);
-  const nErr = D.filter(d => verificaModalita(d, nave).some(v => v.liv === 'errore')).length;
+  for (let a = 0; a < D.length; a++) for (let b = a + 1; b < D.length; b++) P[a + '-' + b] = coppiaUnita(DM, G.E[a], G.E[b], PM);
+  return { D, P, G, misto };
+}
+function matriceHTML(D, P) {
+  let h = `<div class="scroll"><table class="segr cgm"><tr><th></th>${D.map(d => `<th>${esc(d.nn)}</th>`).join('')}</tr>`;
+  D.forEach((d, a) => { h += `<tr><td>${esc(d.nn)}. ${esc(et(d))}${d.rinfusa ? ' <span class="small">(rinfusa)</span>' : ''}</td>${D.map((e, b) => a === b ? '<td class="n">·</td>' : cella(P[Math.min(a, b) + '-' + Math.max(a, b)])).join('')}</tr>`; });
+  return h + '</table></div>';
+}
+function unitaMisteHTML(DM, PM, U, cls) { // merci nella stessa unità: 7.3.4.1 e 7.2.7 (v1.16)
+  let h = '<h3>Unità di trasporto con carico misto</h3>';
+  for (const e of U.G.err) h += `<p class="err">${esc(e.txt)} <span class="small">(${esc(e.par)})</span></p>`;
+  const L = U.G.E.filter(I => I.length > 1);
+  if (!L.length) return U.G.err.length ? h : '';
+  h += '<ul class="segnalate">' + L.map(I => {
+    const V = verificaUnita(DM, I, PM), d = DM[I[0]];
+    const esito = V.some(v => v.liv === 'errore') ? '<span class="cgl4">&nbsp;non ammessa&nbsp;</span>' : V.length ? '<span class="cgl2">&nbsp;ammessa a condizione&nbsp;</span>' : '<span class="cgl0">&nbsp;ammessa&nbsp;</span>';
+    return `<li><b>${esc(siglaNorm(d.o.sigla))}</b>, ${esc(UNITA[d.unita])}: ${I.map(i => `${i + 1}. ${esc(lab(DM[i]))}`).join(', ')} → ${esito}<ul>${V.length ? V.map(v => `<li class="${v.liv === 'errore' ? 'err' : ''}">${v.liv === 'errore' ? 'Non ammesso' : 'Attenzione'}: ${esc(v.txt)} <span class="small">(${esc(v.par)})</span></li>`).join('') : '<li>nessuna segregazione richiesta fra le merci dell\'unità: possono essere trasportate nella stessa unità (7.3.4.1)</li>'}</ul></li>`;
+  }).join('') + '</ul>';
+  return h + `<p class="${cls}">Merci con la stessa sigla nella stessa unità chiusa o aperta. Fra merci che richiedono segregazione secondo il capitolo 7.2 la stessa unità non è ammessa; per “away from” (lontano da) solo con l'approvazione dell'autorità competente, mantenendo un livello di sicurezza equivalente (7.3.4.1). Nella matrice ogni unità con carico misto è una sola riga: il valore verso ogni altra unità è il più severo fra tutte le coppie di merci delle due unità.</p>`;
+}
+function caricoRisHTML(perStampa = false) {
+  const DM = carico.map(cgDati), cls = perStampa ? 'nota' : 'small';
+  if (DM.length < 2) return `<p class="${cls}">Aggiungere almeno due merci.</p>`;
+  const PM = {};
+  for (let a = 0; a < DM.length; a++) for (let b = a + 1; b < DM.length; b++) PM[a + '-' + b] = coppiaCarico(DM[a], DM[b]);
+  const U = unitaCarico(DM, PM), D = U.D, P = U.P, n = D.length;
+  const nErr = DM.filter(d => verificaModalita(d, nave).some(v => v.liv === 'errore')).length;
   let h = nErr ? `<p class="err">${nErr === 1 ? 'Una merce ha' : nErr + ' merci hanno'} una modalità di trasporto non ammessa dal Codice: vedere ${perStampa ? 'l\'elenco delle merci' : 'la voce nella lista'}.</p>` : '';
-  h += `<h3>Matrice di segregazione</h3><div class="scroll"><table class="segr cgm"><tr><th></th>${D.map((d, j) => `<th>${j + 1}</th>`).join('')}</tr>`;
-  D.forEach((d, a) => { h += `<tr><td>${a + 1}. ${esc(lab(d))}${d.rinfusa ? ' <span class="small">(rinfusa)</span>' : ''}</td>${D.map((e, b) => a === b ? '<td class="n">·</td>' : cella(P[Math.min(a, b) + '-' + Math.max(a, b)])).join('')}</tr>`; });
+  const uErr = U.G.E.filter(I => I.length > 1 && verificaUnita(DM, I, PM).some(v => v.liv === 'errore')).length + U.G.err.length;
+  if (uErr) h += `<p class="err">${uErr === 1 ? 'Un\'unità di trasporto con carico misto non è ammessa' : uErr + ' unità di trasporto con carico misto non sono ammesse'} o ${uErr === 1 ? 'ha' : 'hanno'} dati da correggere: vedere “Unità di trasporto con carico misto”.</p>`;
+  if (raggr) h += unitaMisteHTML(DM, PM, U, cls);
+  h += `<h3>Matrice di segregazione${U.misto ? ' fra le unità di trasporto' : ''}</h3>` + matriceHTML(D, P);
   // legenda: una voce per riga (richiesta di Luca, v1.7)
   const leg = [0, 1, 2, 3, 4].map(l => `<b>${l || '–'}</b> = ${l ? esc(TERMINE[l]) + ' (' + esc(TERMINE_IT[l]) + ')' : esc(TERMINE_IT[0])}`);
   leg.push('<b><sup>d</sup></b> = deroga possibile (7.2.6.1 o 7.2.6.5) se ne ricorrono le condizioni',
@@ -169,6 +201,11 @@ function caricoRisHTML(perStampa = false) {
   if (Object.values(P).some(p => p.imsbc)) leg.push('<b>R</b> = due materiali alla rinfusa: segregazione secondo il Codice IMSBC, non calcolata');
   if (Object.values(P).some(p => p.rinfusa && !p.imsbc)) leg.push('rinfusa con merce imballata: tabella 7.6.3.5.2');
   h += `</table></div><ul class="leg ${cls}">${leg.map(x => `<li>${x}</li>`).join('')}</ul>`;
+  if (U.misto) {
+    if (!perStampa || tabMerci) h += '<h3>Matrice fra le singole merci</h3>';
+    if (!perStampa) h += `<button type="button" class="sec mini" id="btnMerci" aria-pressed="${tabMerci}">${tabMerci ? 'Nascondi la matrice fra le singole merci' : 'Mostra la matrice fra le singole merci (sarà riportata anche nel report)'}</button>`;
+    if (tabMerci) h += matriceHTML(DM.map((d, j) => Object.assign({}, d, { nn: String(j + 1) })), PM);
+  }
   h += segnalateHTML(D, P, cls);
   h += bordoHTML(D, P, cls, perStampa);
   // dettaglio per coppia: sullo schermo solo a richiesta, nel report solo se attivato (richiesta di Luca, v1.5)
@@ -177,20 +214,21 @@ function caricoRisHTML(perStampa = false) {
   if (!tabCoppie && !perStampa) h += `<p class="${cls}">Dettaglio non attivo: paragrafi del Codice, unità di trasporto e prescrizioni a bordo (testo originale) di ogni coppia.</p>`;
   if (tabCoppie) for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) {
     const p = P[a + '-' + b], cond = p.motivi.filter(m => m.cond && m.lev > p.lev), der = p.motivi.filter(m => m.der && !m.cond && m.lev > p.levDer);
-    const titolo = `${a + 1}–${b + 1}: ${esc(lab(D[a]))} / ${esc(lab(D[b]))} → <b>${p.lev ? TERMINE[p.lev] : TERMINE_IT[0]}</b>${p.levDer < p.lev ? ` (deroga possibile: ${p.levDer ? TERMINE[p.levDer] : TERMINE_IT[0]})` : ''}${cond.length ? ' *' : ''}`;
+    const titolo = `${D[a].nn}–${D[b].nn}: ${esc(et(D[a]))} / ${esc(et(D[b]))} → <b>${p.lev ? TERMINE[p.lev] : TERMINE_IT[0]}</b>${p.levDer < p.lev ? ` (deroga possibile: ${p.levDer ? TERMINE[p.levDer] : TERMINE_IT[0]})` : ''}${cond.length ? ' *' : ''}`;
     const ctu = p.lev === 0 ? (p.ctu ? 'ammesse nella stessa unità di trasporto' : 'non nella stessa unità di trasporto') : p.lev === 1 ? 'non nella stessa unità di trasporto, salvo approvazione dell\'autorità competente con un livello di sicurezza equivalente (7.3.4.1); non nello stesso imballaggio esterno (7.2.3.2)' : 'non nella stessa unità di trasporto né nello stesso imballaggio esterno (7.2.3.2, 7.3.4.1)';
     let c = `<ul class="${perStampa ? '' : 'ip'}">${p.motivi.filter(m => !m.cond && !(m.der && m.lev > p.levDer)).map(m => `<li>${esc(m.txt)}</li>`).join('')}`;
     c += der.map(m => `<li>${esc(m.txt)} – <i>${esc(typeof m.der === 'string' ? m.der : 'derogabile secondo 7.2.6.1 se le merci non reagiscono pericolosamente fra loro')}</i></li>`).join('');
     c += cond.map(m => `<li>* ${esc(m.txt)} – <i>${esc(m.cond)}</i></li>`).join('');
     c += p.note.map(t => `<li class="${cls}">${esc(t)}</li>`).join('');
-    if (!p.rinfusa) c += `<li><b>Unità di trasporto</b>: ${esc(ctu)}</li>`;
+    if (p.coppie) c = `<ul class="${perStampa ? '' : 'ip'}"><li><b>Coppie di merci</b>: ${p.coppie.map(([x, y, q]) => `${x + 1}–${y + 1} ${esc(q.lev ? TERMINE[q.lev] : TERMINE_IT[0])}${q.lev === p.lev && p.lev ? ' (prevale)' : ''}`).join('; ')}</li>` + c.slice(c.indexOf('>') + 1);
+    if (!p.rinfusa && !p.unita) c += `<li><b>Unità di trasporto</b>: ${esc(ctu)}</li>`;
     if (p.lev) { const bc = bordoCoppia(D[a], D[b], p.lev); c += `<li><b>A bordo</b> (testo originale): ${esc(bc.en)}</li>`; }
     c += '</ul>';
     h += perStampa ? `<p class="coppia">${titolo}</p>${c}` : `<details${p.lev || cond.length ? ' open' : ''}><summary>${titolo}</summary>${c}</details>`;
   }
-  h += stivaggioHTML(D, perStampa);
+  h += stivaggioHTML(DM, perStampa);
   const scelte = D.filter(d => piuSussidiari(d) && d.o.subTab).map(d => 'UN ' + d.u);
-  h += `<p class="${cls}">Ipotesi della verifica: tabella 7.2.4 con la classe principale e, se la DGL indica un solo rischio sussidiario, anche con quello (7.2.3.3); con due o più rischi sussidiari valgono le prescrizioni della colonna 16b (7.2.3.4)${scelte.length ? `; per ${scelte.join(', ')} l'utente ha scelto di applicare la tabella 7.2.4 anche ai rischi sussidiari, oltre quanto previsto da 7.2.3.4` : ''}; i codici “come per la classe” sostituiscono la riga della classe principale (7.2.6.2); nei codici “classe …” della colonna 16b la classe comprende i rischi sussidiari (7.2.2.2); prevale la prescrizione più severa e la colonna 16b prevale sulla tabella (7.2.3.1). A bordo: tabella 7.4.3.2, 7.4.3.3 o 7.5.3.2, oppure definizioni di 7.6.3.2 con 7.6.3.3 e 7.6.3.4, secondo il tipo di nave e l'unità indicata per ogni merce (chiusa, aperta, colli). Solidi in bulk container: unità di trasporto (BK2 chiuso = unità chiusa; BK1 telonato e BK3 flessibile = unità non chiuse, 1.2.1). La tabella 7.6.3.5.2 vale solo fra solidi alla rinfusa sciolti in stiva e merci imballate. Solidi alla rinfusa sciolti in stiva: tabella 7.6.3.5.2 con la classe principale e la colonna 16b; fra due rinfuse vale il Codice IMSBC, non calcolato. Rinfuse liquide non considerate. Non sono riportate le prescrizioni per le chiatte (7.7). Verifica di supporto tecnico: la responsabilità della segregazione resta di chi prepara il carico.</p>`;
+  h += `<p class="${cls}">Ipotesi della verifica: tabella 7.2.4 con la classe principale e, se la DGL indica un solo rischio sussidiario, anche con quello (7.2.3.3); con due o più rischi sussidiari valgono le prescrizioni della colonna 16b (7.2.3.4)${scelte.length ? `; per ${scelte.join(', ')} l'utente ha scelto di applicare la tabella 7.2.4 anche ai rischi sussidiari, oltre quanto previsto da 7.2.3.4` : ''}; i codici “come per la classe” sostituiscono la riga della classe principale (7.2.6.2); nei codici “classe …” della colonna 16b la classe comprende i rischi sussidiari (7.2.2.2); prevale la prescrizione più severa e la colonna 16b prevale sulla tabella (7.2.3.1). A bordo: tabella 7.4.3.2, 7.4.3.3 o 7.5.3.2, oppure definizioni di 7.6.3.2 con 7.6.3.3 e 7.6.3.4, secondo il tipo di nave e l'unità indicata per ogni merce (chiusa, aperta, colli). Solidi in bulk container: unità di trasporto (BK2 chiuso = unità chiusa; BK1 telonato e BK3 flessibile = unità non chiuse, 1.2.1). La tabella 7.6.3.5.2 vale solo fra solidi alla rinfusa sciolti in stiva e merci imballate. Solidi alla rinfusa sciolti in stiva: tabella 7.6.3.5.2 con la classe principale e la colonna 16b; fra due rinfuse vale il Codice IMSBC, non calcolato. Rinfuse liquide non considerate.${U.misto ? ' Unità con carico misto: merci con la stessa sigla nella stessa unità chiusa o aperta, verificate fra loro secondo 7.3.4.1 e 7.2.7; fra unità diverse vale la coppia di merci più severa.' : ''} Non sono riportate le prescrizioni per le chiatte (7.7). Verifica di supporto tecnico: la responsabilità della segregazione resta di chi prepara il carico.</p>`;
   return h;
 }
 function mostraCarico() {
@@ -239,18 +277,24 @@ $('cgMhbAdd').onclick = () => {
   if (!nome) { $('cgMsg').textContent = 'Indicare il nome del materiale MHB (come nel Codice IMSBC).'; $('cgMhb').focus(); return; }
   carico.push({ mhb: true, nome, u: 'MHB' }); $('cgMhb').value = ''; $('cgMsg').textContent = ''; mostraCarico();
 };
+$('cgRagg').checked = raggr;
+$('cgRagg').addEventListener('change', () => { raggr = $('cgRagg').checked; try { localStorage.setItem('raggruppa', raggr ? '1' : '0'); } catch (er) { } mostraCarico(); });
 $('cgVuota').onclick = () => { if (!carico.length || confirm('Togliere tutte le merci dal carico?')) { carico = []; mostraCarico(); } };
 $('cgLista').addEventListener('change', e => {
   const t = e.target, n = +t.dataset.n, k = t.dataset.k; if (!k || !carico[n]) return;
   const it = carico[n]; it.opz = it.opz || {};
   if (k === 'i') it.i = +t.value; else if (k === 'lq' || k === 'eq') it[k] = t.checked;
   else if (['aer1L', 'pf60', 'subTab', 'aperto'].includes(k)) it.opz[k] = t.checked; else it.opz[k] = t.value;
+  // stessa unità: stesso tipo (chiusa o aperta) per tutte le merci con la stessa sigla (v1.16)
+  const sg = raggr && siglaNorm(it.opz.sigla), altre = sg ? carico.filter(x => x !== it && !x.mhb && siglaNorm((x.opz || {}).sigla) === sg) : [];
+  if (k === 'unita' && MISTA.includes(t.value)) for (const x of altre) { const dx = cgDati(x); if (MISTA.includes(dx.unita) && unitaAmmesse(dx).includes(t.value)) { x.opz = x.opz || {}; x.opz.unita = t.value; } }
+  if (k === 'sigla' && altre.length) { const ux = cgDati(altre[0]).unita, d = cgDati(it); if (MISTA.includes(ux) && MISTA.includes(d.unita) && unitaAmmesse(d).includes(ux)) it.opz.unita = ux; }
   mostraCarico();
 });
 $('cgRis').addEventListener('click', e => {
   const id = e.target.id;
-  if (id === 'btnBordo') tabBordo = !tabBordo; else if (id === 'btnCoppie') tabCoppie = !tabCoppie; else return;
-  try { localStorage.setItem('tabBordo', tabBordo ? '1' : '0'); localStorage.setItem('tabCoppie', tabCoppie ? '1' : '0'); } catch (er) { }
+  if (id === 'btnBordo') tabBordo = !tabBordo; else if (id === 'btnCoppie') tabCoppie = !tabCoppie; else if (id === 'btnMerci') tabMerci = !tabMerci; else return;
+  try { localStorage.setItem('tabBordo', tabBordo ? '1' : '0'); localStorage.setItem('tabCoppie', tabCoppie ? '1' : '0'); localStorage.setItem('tabMerci', tabMerci ? '1' : '0'); } catch (er) { }
   mostraCarico(); const b = $(id); if (b) b.focus();
 });
 $('cgLista').addEventListener('click', e => { const t = e.target; if (t.dataset.k === 'via') { carico.splice(+t.dataset.n, 1); mostraCarico(); } });
@@ -261,7 +305,7 @@ $('cgPrint').onclick = () => {
   const s = leggiImpostazioni(), quando = new Date().toLocaleString('it-IT', { dateStyle: 'long', timeStyle: 'short' }), rif = $('cgRif').value.trim();
   let h = s.carta ? cartaHTML() : '';
   h += `<div class="intest"><h1>Verifica di segregazione del carico</h1><table class="dati"><tr><td>Data di redazione</td><td>${esc(quando)}</td></tr>${rif ? `<tr><td>Carico</td><td>${esc(rif)}</td></tr>` : ''}<tr><td>Riferimenti</td><td>IMDG Code, Emendamento 42-24 (Ris. MSC.556(108)), capitoli 3.4, 3.5, 7.1, 7.2, 7.3 e 7.4</td></tr></table></div>`;
-  h += '<h3>Merci del carico</h3><table class="dati merci">' + carico.map((it, j) => { const d = cgDati(it); return `<tr><td>${j + 1}. ${esc(lab(d))}</td><td>${esc(d.nome)} – ${d.mhb ? 'materiale pericoloso solo alla rinfusa (MHB)' : 'classe ' + esc(d.cl)}${UNITA_TXT[d.unita] ? '; ' + UNITA_TXT[d.unita] : ''}${d.sub.length ? ', rischi sussidiari ' + esc(d.sub.join('/')) : ''}${d.pg && d.pg !== '–' ? ', GI ' + esc(d.pg) : ''}; 16b: ${esc(d.r['16b'] || '–')}${ems(d) ? '; EmS: ' + esc(ems(d)) : ''}${d.sgg.length && d.o.sgg ? '; gruppo dichiarato ' + esc(d.o.sgg) : ''}${it.lq ? '; quantità limitate' : ''}${it.eq ? '; quantità esenti' : ''}${piuSussidiari(d) && d.o.subTab ? '; tabella 7.2.4 applicata anche ai rischi sussidiari per scelta dell\'utente' : ''}${alimenti(d) ? '; alimenti: ' + esc(alimenti(d)) : ''}${verificaModalita(d, nave).map(v => `<br><b>${v.liv === 'errore' ? 'Non ammesso' : 'Attenzione'}</b>: ${esc(v.txt)} (${esc(v.par)})`).join('')}</td></tr>`; }).join('') + '</table>';
+  h += '<h3>Merci del carico</h3><table class="dati merci">' + carico.map((it, j) => { const d = cgDati(it); return `<tr><td>${j + 1}. ${esc(lab(d))}</td><td>${esc(d.nome)} – ${d.mhb ? 'materiale pericoloso solo alla rinfusa (MHB)' : 'classe ' + esc(d.cl)}${UNITA_TXT[d.unita] ? '; ' + UNITA_TXT[d.unita] : ''}${raggr && siglaNorm(d.o.sigla) ? '; unità ' + esc(siglaNorm(d.o.sigla)) : ''}${d.sub.length ? ', rischi sussidiari ' + esc(d.sub.join('/')) : ''}${d.pg && d.pg !== '–' ? ', GI ' + esc(d.pg) : ''}; 16b: ${esc(d.r['16b'] || '–')}${ems(d) ? '; EmS: ' + esc(ems(d)) : ''}${d.sgg.length && d.o.sgg ? '; gruppo dichiarato ' + esc(d.o.sgg) : ''}${it.lq ? '; quantità limitate' : ''}${it.eq ? '; quantità esenti' : ''}${piuSussidiari(d) && d.o.subTab ? '; tabella 7.2.4 applicata anche ai rischi sussidiari per scelta dell\'utente' : ''}${alimenti(d) ? '; alimenti: ' + esc(alimenti(d)) : ''}${verificaModalita(d, nave).map(v => `<br><b>${v.liv === 'errore' ? 'Non ammesso' : 'Attenzione'}</b>: ${esc(v.txt)} (${esc(v.par)})`).join('')}</td></tr>`; }).join('') + '</table>';
   h += `<table class="dati"><tr><td>Nave</td><td>${esc(NAVE_TIPO[nave.tipo])}${nave.tipo === 'chiuse' ? '; ' + esc(COPERT[nave.copert]) : ''}${['roro', 'generale'].includes(nave.tipo) ? '; ' + esc(PAX[nave.pax || 'carico']) : ''}${nave.vecchia ? '; costruita prima del 1/9/1984 (≥ 500 GT) o del 1/2/1992 (< 500 GT)' : ''}</td></tr></table>`;
   h += caricoRisHTML(true);
   h += `<p class="nota">Parere tecnico di supporto redatto con l'app Verifica di segregazione v${VERSIONE}: non è un atto amministrativo e non sostituisce la consultazione del testo ufficiale del Codice IMDG.</p>`;
